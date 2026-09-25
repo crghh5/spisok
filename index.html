@@ -13,6 +13,7 @@
     background: #f0f2f5;
     min-height: 100vh;
     overflow-x: hidden;
+    color: #333;
   }
 
   /* ===== СТАРТОВЫЙ ЭКРАН ===== */
@@ -24,6 +25,7 @@
     min-height: 100vh;
     width: 100%;
     padding: 20px;
+    text-align: center;
   }
 
   #startScreen h1 {
@@ -33,9 +35,11 @@
   }
 
   #startScreen .subtitle {
-    color: #888;
+    color: #666;
     font-size: 16px;
     margin-bottom: 50px;
+    max-width: 300px;
+    line-height: 1.4;
   }
 
   .camera-btn-big {
@@ -51,21 +55,24 @@
     flex-direction: column;
     transition: all 0.3s;
     box-shadow: 0 6px 25px rgba(76,175,80,0.35);
+    position: relative;
+    overflow: hidden;
   }
 
   .camera-btn-big:hover { transform: scale(1.08); }
   .camera-btn-big:active { transform: scale(0.93); }
 
-  .camera-btn-big .cam-icon { font-size: 48px; }
+  .camera-btn-big .cam-icon { font-size: 48px; z-index: 2; }
   .camera-btn-big .cam-label {
     font-size: 13px;
     color: #4CAF50;
     font-weight: 700;
     margin-top: 4px;
+    z-index: 2;
   }
 
   /* ===== ОСНОВНОЙ ЭКРАН ===== */
-  #mainScreen { display: none; padding-bottom: 30px; }
+  #mainScreen { display: none; padding-bottom: 40px; }
 
   .topBar {
     display: flex;
@@ -98,56 +105,32 @@
   .camera-btn-small:hover { transform: scale(1.1); }
   .camera-btn-small:active { transform: scale(0.9); }
 
-  /* Фото */
+  /* Фото с фильтрами */
   .photoWrap {
     margin: 12px 16px;
     border-radius: 14px;
     overflow: hidden;
     box-shadow: 0 3px 12px rgba(0,0,0,0.12);
     display: none;
+    position: relative;
+    background: #000;
   }
-  .photoWrap img { width: 100%; display: block; max-height: 220px; object-fit: cover; }
-
-  /* Статистика */
-  .stats {
-    display: flex;
-    gap: 10px;
-    margin: 0 16px 14px;
-  }
-  .stat-box {
-    flex: 1;
-    background: white;
-    border-radius: 12px;
-    padding: 12px;
-    text-align: center;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
-  }
-  .stat-box .num { font-size: 26px; font-weight: 800; }
-  .stat-box .lbl { font-size: 12px; color: #999; margin-top: 2px; }
-  .stat-box.green .num { color: #4CAF50; }
-  .stat-box.red .num { color: #f44336; }
-
-  /* Прогресс-бар */
-  .progressWrap {
-    margin: 0 16px 14px;
-    background: #e0e0e0;
-    border-radius: 10px;
-    height: 10px;
-    overflow: hidden;
-  }
-  .progressBar {
-    height: 100%;
-    background: linear-gradient(90deg, #4CAF50, #66BB6A);
-    border-radius: 10px;
-    transition: width 0.5s ease;
+  
+  .photoWrap img { 
+    width: 100%; 
+    display: block; 
+    max-height: 300px; 
+    object-fit: cover;
+    /* Делаем фото черно-белым, чтобы цвета магнитов выделялись */
+    filter: grayscale(100%) contrast(1.2) brightness(0.8);
   }
 
   /* Список */
   .listContainer {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 8px;
-    padding: 0 16px;
+    gap: 10px;
+    padding: 16px;
   }
 
   .item {
@@ -156,44 +139,54 @@
     justify-content: space-between;
     background: white;
     border-radius: 12px;
-    padding: 12px 14px;
+    padding: 14px 16px;
     box-shadow: 0 2px 6px rgba(0,0,0,0.05);
     cursor: pointer;
     transition: all 0.2s;
     user-select: none;
     -webkit-tap-highlight-color: transparent;
+    border-left: 5px solid transparent;
   }
+  
   .item:active { transform: scale(0.96); }
 
-  .item .name {
-    font-size: 15px;
-    font-weight: 600;
-    color: #333;
+  /* Стили для КРАСНОГО (не куплено) */
+  .item.not-bought {
+    border-left-color: #f44336;
+    background: #fff5f5;
+  }
+  .item.not-bought .name { color: #d32f2f; font-weight: 700; }
+  .item.not-bought .dot {
+    background: #f44336;
+    color: white;
+    box-shadow: 0 2px 8px rgba(244,67,54,0.4);
   }
 
+  /* Стили для ЗЕЛЕНОГО (куплено) */
+  .item.bought {
+    border-left-color: #4CAF50;
+    background: #f1f8e9;
+  }
+  .item.bought .name { color: #388e3c; font-weight: 600; }
+  .item.bought .dot {
+    background: #4CAF50;
+    color: white;
+    box-shadow: 0 2px 8px rgba(76,175,80,0.4);
+  }
+
+  .item .name { font-size: 15px; }
+
   .item .dot {
-    width: 28px;
-    height: 28px;
+    width: 24px;
+    height: 24px;
     border-radius: 50%;
     flex-shrink: 0;
-    transition: all 0.3s;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 14px;
+    font-size: 12px;
+    font-weight: bold;
   }
-
-  .item.bought .dot {
-    background: #4CAF50;
-    box-shadow: 0 2px 8px rgba(76,175,80,0.4);
-  }
-  .item.bought .name { color: #4CAF50; }
-
-  .item.not-bought .dot {
-    background: #f44336;
-    box-shadow: 0 2px 8px rgba(244,67,54,0.4);
-  }
-  .item.not-bought .name { color: #f44336; }
 
   /* Сообщение "Ты всё купил" */
   .allDone {
@@ -219,7 +212,7 @@
   /* Кнопка сброса */
   .resetBtn {
     display: block;
-    margin: 20px auto;
+    margin: 10px auto 30px;
     padding: 12px 30px;
     background: #ff9800;
     color: white;
@@ -243,7 +236,7 @@
 <!-- СТАРТОВЫЙ ЭКРАН -->
 <div id="startScreen">
   <h1>🛒 Список покупок</h1>
-  <p class="subtitle">Сфотографируй доску со списком</p>
+  <p class="subtitle">Сфотографируй доску, чтобы видеть,<br>что нужно купить</p>
   <button class="camera-btn-big" onclick="openCamera()">
     <span class="cam-icon">📷</span>
     <span class="cam-label">Сфоткать</span>
@@ -259,21 +252,6 @@
 
   <div class="photoWrap" id="photoWrap">
     <img id="photoImg" src="" alt="Фото доски">
-  </div>
-
-  <div class="stats">
-    <div class="stat-box green">
-      <div class="num" id="greenCount">0</div>
-      <div class="lbl">✅ Куплено</div>
-    </div>
-    <div class="stat-box red">
-      <div class="num" id="redCount">0</div>
-      <div class="lbl">❌ Осталось</div>
-    </div>
-  </div>
-
-  <div class="progressWrap">
-    <div class="progressBar" id="progressBar" style="width:0%"></div>
   </div>
 
   <div class="allDone" id="allDone">
@@ -312,7 +290,8 @@
     if (saved) {
       items = JSON.parse(saved);
     } else {
-      allProducts.forEach(p => items[p] = true); // по умолчанию все зелёные
+      // По умолчанию все зеленые (куплены), как на твоей доске в начале
+      allProducts.forEach(p => items[p] = true);
     }
     const savedPhoto = localStorage.getItem('shoppingPhoto');
     if (savedPhoto) photoData = savedPhoto;
@@ -352,30 +331,28 @@
     const container = document.getElementById('listContainer');
     container.innerHTML = '';
 
-    let green = 0, red = 0;
+    let greenCount = 0;
 
     allProducts.forEach(name => {
       const bought = items[name] !== false;
-      if (bought) green++; else red++;
+      if (bought) greenCount++;
 
       const div = document.createElement('div');
       div.className = 'item ' + (bought ? 'bought' : 'not-bought');
       div.onclick = () => toggleItem(name);
+      
+      // Иконка галочки или крестика
+      const icon = bought ? '✓' : '✕';
+      
       div.innerHTML = `
         <span class="name">${name}</span>
-        <span class="dot">${bought ? '✓' : '✗'}</span>
+        <span class="dot">${icon}</span>
       `;
       container.appendChild(div);
     });
 
-    document.getElementById('greenCount').textContent = green;
-    document.getElementById('redCount').textContent = red;
-
-    const pct = allProducts.length > 0 ? (green / allProducts.length * 100) : 0;
-    document.getElementById('progressBar').style.width = pct + '%';
-
     const allDone = document.getElementById('allDone');
-    if (green === allProducts.length && allProducts.length > 0) {
+    if (greenCount === allProducts.length && allProducts.length > 0) {
       allDone.style.display = 'block';
     } else {
       allDone.style.display = 'none';

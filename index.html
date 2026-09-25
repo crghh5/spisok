@@ -32,9 +32,9 @@
   /* Оверлей сканирования */
   .scan-overlay {
     position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0,0,0,0.6); display: none; 
+    background: rgba(0,0,0,0.7); display: none; 
     align-items: center; justify-content: center; flex-direction: column;
-    color: white; font-weight: bold; z-index: 10;
+    color: white; font-weight: bold; z-index: 10; backdrop-filter: blur(2px);
   }
   .spinner {
     width: 40px; height: 40px; border: 4px solid rgba(255,255,255,0.3);
@@ -95,7 +95,7 @@
   <img id="photoImg" src="" alt="Фото доски">
   <div class="scan-overlay" id="scanner">
     <div class="spinner"></div>
-    <div>Сканирую цвета...</div>
+    <div id="scanText">Анализирую переключатели...</div>
   </div>
 </div>
 
@@ -161,19 +161,19 @@
       document.getElementById('photoImg').src = photoData;
       document.getElementById('photoWrap').style.display = 'block';
       
-      // Запускаем сканер
       const scanner = document.getElementById('scanner');
+      const scanText = document.getElementById('scanText');
       scanner.style.display = 'flex';
+      scanText.innerText = "Сканирую переключатели...";
       
-      // Небольшая задержка для отрисовки картинки
-      setTimeout(() => scanGrid(photoData), 300);
+      setTimeout(() => scanSwitches(photoData), 500);
     };
     reader.readAsDataURL(file);
     e.target.value = '';
   }
 
-  // ГЛАВНАЯ ФУНКЦИЯ: Сканирование по сетке
-  function scanGrid(imgSrc) {
+  // УЛУЧШЕННЫЙ СКАНЕР ПЕРЕКЛЮЧАТЕЛЕЙ
+  function scanSwitches(imgSrc) {
     const img = new Image();
     img.crossOrigin = "Anonymous";
     img.src = imgSrc;
@@ -182,8 +182,8 @@
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       
-      // Уменьшаем картинку для скорости (достаточно 200px ширины)
-      const scaleW = 200;
+      // Масштабируем для анализа
+      const scaleW = 300; // Чуть больше для точности
       const scaleH = (img.height / img.width) * scaleW;
       
       canvas.width = scaleW;
@@ -193,72 +193,61 @@
       const imageData = ctx.getImageData(0, 0, scaleW, scaleH);
       const data = imageData.data;
       
-      // Параметры сетки: 2 колонки, 22 ряда (всего 44 продукта)
       const cols = 2;
       const rows = 22;
       const cellW = scaleW / cols;
       const cellH = scaleH / rows;
       
-      // Проходим по каждой ячейке
+      // Проходим по сетке
       for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols; c++) {
-          // Вычисляем индекс продукта в массиве
-          // Сначала идет левая колонка (c=0), потом правая (c=1)
-          // Но в массиве allProducts сначала идут все 22 левой, потом 22 правой.
-          // Поэтому формула индекса зависит от колонки:
-          let productIndex;
-          if (c === 0) {
-            productIndex = r; // 0..21
-          } else {
-            productIndex = 22 + r; // 22..43
-          }
-          
+          let productIndex = (c === 0) ? r : 22 + r;
           const productName = allProducts[productIndex];
           
-          // Анализируем пиксели внутри этой ячейки
-          let redPixels = 0;
-          let greenPixels = 0;
-          let totalPixels = 0;
+          // Зона анализа магнита (правая часть ячейки)
+          // Смещаемся правее, чтобы попасть точно на свитч
+          const startX = Math.floor(c * cellW + cellW * 0.65); 
+          const endX = Math.floor((c + 1) * cellW - 10);
+          const startY = Math.floor(r * cellH + cellH * 0.25);
+          const endY = Math.floor((r + 1) * cellH - 0.25);
           
-          // Берем область ячейки с небольшим отступом (чтобы не захватить рамки)
-          const startX = Math.floor(c * cellW + cellW * 0.6); // Смещаемся вправо к магниту
-          const startY = Math.floor(r * cellH + cellH * 0.3);
-          const endX = Math.floor((c + 1) * cellW - 5);
-          const endY = Math.floor((r + 1) * cellH - 5);
+          let redScore = 0;
+          let greenScore = 0;
           
           for (let y = startY; y < endY; y++) {
             for (let x = startX; x < endX; x++) {
               const i = (y * scaleW + x) * 4;
-              const rVal = data[i];
-              const gVal = data[i+1];
-              const bVal = data[i+2];
+              const R = data[i];
+              const G = data[i+1];
+              const B = data[i+2];
               
-              // Детектор КРАСНОГО (магнит)
-              if (rVal > 140 && gVal < 100 && bVal < 100) {
-                redPixels++;
+              // Строгий детектор ЯРКОГО КРАСНОГО (фон свитча)
+              // R высокий, G и B низкие
+              if (R > 160 && G < 90 && B < 90) {
+                redScore++;
               }
-              // Детектор ЗЕЛЕНОГО (магнит)
-              else if (gVal > 130 && rVal < 160 && bVal < 100) {
-                greenPixels++;
+              
+              // Строгий детектор ЯРКОГО ЗЕЛЕНОГО (фон свитча)
+              // G высокий, R средний/низкий, B низкий
+              else if (G > 140 && R < 180 && B < 100) {
+                greenScore++;
               }
-              totalPixels++;
             }
           }
           
-          // Определяем состояние по большинству пикселей
-          // Если красного больше 5% от области - считаем красным
-          // Иначе считаем зеленым (по умолчанию)
-          const threshold = totalPixels * 0.03; 
+          // ЛОГИКА ОПРЕДЕЛЕНИЯ:
+          // Если мы нашли хоть сколько-то красного (больше 10 пикселей), считаем что свитч ВКЛЮЧЕН (красный фон виден).
+          // Иначе считаем что он зеленый.
+          // Это решает проблему, когда красный цвет занимает мало места.
           
-          if (redPixels > threshold) {
-            items[productName] = false; // Красный (не куплено)
+          if (redScore > 15) {
+             items[productName] = false; // Красный (надо купить)
           } else {
-            items[productName] = true;  // Зеленый (куплено)
+             items[productName] = true;  // Зеленый (куплено)
           }
         }
       }
       
-      // Сохраняем и обновляем интерфейс
       saveState();
       renderList();
       document.getElementById('scanner').style.display = 'none';
@@ -305,7 +294,6 @@
     }
   }
 
-  // Запуск
   loadState();
   renderList();
 </script>

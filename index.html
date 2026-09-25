@@ -10,127 +10,87 @@
 
   body {
     font-family: 'Segoe UI', Tahoma, sans-serif;
-    background: #f0f2f5;
+    background: #f4f6f9;
     min-height: 100vh;
-    overflow-x: hidden;
     color: #333;
+    padding-bottom: 40px;
   }
 
-  /* ===== СТАРТОВЫЙ ЭКРАН ===== */
-  #startScreen {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-height: 100vh;
-    width: 100%;
-    padding: 20px;
-    text-align: center;
-  }
-
-  #startScreen h1 {
-    font-size: 32px;
-    color: #333;
-    margin-bottom: 8px;
-  }
-
-  #startScreen .subtitle {
-    color: #666;
-    font-size: 16px;
-    margin-bottom: 50px;
-    max-width: 300px;
-    line-height: 1.4;
-  }
-
-  .camera-btn-big {
-    width: 140px;
-    height: 140px;
-    border-radius: 50%;
-    border: 5px solid #4CAF50;
-    background: white;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
-    transition: all 0.3s;
-    box-shadow: 0 6px 25px rgba(76,175,80,0.35);
-    position: relative;
-    overflow: hidden;
-  }
-
-  .camera-btn-big:hover { transform: scale(1.08); }
-  .camera-btn-big:active { transform: scale(0.93); }
-
-  .camera-btn-big .cam-icon { font-size: 48px; z-index: 2; }
-  .camera-btn-big .cam-label {
-    font-size: 13px;
-    color: #4CAF50;
-    font-weight: 700;
-    margin-top: 4px;
-    z-index: 2;
-  }
-
-  /* ===== ОСНОВНОЙ ЭКРАН ===== */
-  #mainScreen { display: none; padding-bottom: 40px; }
-
+  /* ===== ВЕРХНЯЯ ПАНЕЛЬ ===== */
   .topBar {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 14px 16px;
+    padding: 16px 20px;
     background: white;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
     position: sticky;
     top: 0;
     z-index: 100;
   }
 
-  .topBar h2 { font-size: 20px; color: #333; }
+  .topBar h2 { font-size: 22px; font-weight: 700; color: #2c3e50; }
 
   .camera-btn-small {
-    width: 46px;
-    height: 46px;
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
-    border: 3px solid #4CAF50;
+    border: 2px solid #4CAF50;
     background: white;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 20px;
-    transition: all 0.3s;
-    box-shadow: 0 2px 8px rgba(76,175,80,0.3);
+    transition: all 0.2s;
   }
-  .camera-btn-small:hover { transform: scale(1.1); }
-  .camera-btn-small:active { transform: scale(0.9); }
+  .camera-btn-small:active { transform: scale(0.9); background: #f0f0f0; }
 
-  /* Фото с фильтрами */
+  /* ===== ФОТО ===== */
   .photoWrap {
-    margin: 12px 16px;
-    border-radius: 14px;
+    margin: 16px 20px;
+    border-radius: 16px;
     overflow: hidden;
-    box-shadow: 0 3px 12px rgba(0,0,0,0.12);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
     display: none;
-    position: relative;
-    background: #000;
+    background: #eee;
   }
   
   .photoWrap img { 
     width: 100%; 
     display: block; 
-    max-height: 300px; 
+    max-height: 250px; 
     object-fit: cover;
-    /* Делаем фото черно-белым, чтобы цвета магнитов выделялись */
-    filter: grayscale(100%) contrast(1.2) brightness(0.8);
+    /* Убрал grayscale, чтобы цвета были реальными */
   }
 
-  /* Список */
+  /* ===== СООБЩЕНИЕ "ВСЁ КУПИЛ" ===== */
+  .allDone {
+    display: none;
+    margin: 0 20px 20px;
+    background: linear-gradient(135deg, #43a047, #66bb6a);
+    color: white;
+    border-radius: 16px;
+    padding: 24px;
+    text-align: center;
+    box-shadow: 0 8px 20px rgba(76,175,80,0.3);
+    animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+  .allDone .emoji { font-size: 48px; margin-bottom: 10px; display: block; }
+  .allDone .msg { font-size: 24px; font-weight: 800; margin-bottom: 4px; }
+  .allDone .sub { font-size: 15px; opacity: 0.9; }
+
+  @keyframes popIn {
+    0% { transform: scale(0.8); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  /* ===== СПИСОК ===== */
   .listContainer {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 10px;
-    padding: 16px;
+    gap: 12px;
+    padding: 0 20px;
   }
 
   .item {
@@ -138,137 +98,111 @@
     align-items: center;
     justify-content: space-between;
     background: white;
-    border-radius: 12px;
-    padding: 14px 16px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    border-radius: 14px;
+    padding: 16px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
     cursor: pointer;
     transition: all 0.2s;
     user-select: none;
     -webkit-tap-highlight-color: transparent;
-    border-left: 5px solid transparent;
+    border-left: 6px solid transparent;
   }
   
   .item:active { transform: scale(0.96); }
 
-  /* Стили для КРАСНОГО (не куплено) */
+  /* КРАСНЫЙ (НЕ КУПЛЕНО) */
   .item.not-bought {
-    border-left-color: #f44336;
-    background: #fff5f5;
+    border-left-color: #e53935;
+    background: #fffafa;
   }
-  .item.not-bought .name { color: #d32f2f; font-weight: 700; }
+  .item.not-bought .name { color: #c62828; font-weight: 700; }
   .item.not-bought .dot {
-    background: #f44336;
+    background: #e53935;
     color: white;
-    box-shadow: 0 2px 8px rgba(244,67,54,0.4);
+    box-shadow: 0 3px 8px rgba(229,57,53,0.3);
   }
 
-  /* Стили для ЗЕЛЕНОГО (куплено) */
+  /* ЗЕЛЕНЫЙ (КУПЛЕНО) */
   .item.bought {
-    border-left-color: #4CAF50;
+    border-left-color: #43a047;
     background: #f1f8e9;
+    opacity: 0.8; /* Чуть бледнее, когда куплено */
   }
-  .item.bought .name { color: #388e3c; font-weight: 600; }
+  .item.bought .name { 
+    color: #2e7d32; 
+    font-weight: 600; 
+    text-decoration: line-through; /* Зачеркиваем купленное */
+    text-decoration-color: #81c784;
+  }
   .item.bought .dot {
-    background: #4CAF50;
+    background: #43a047;
     color: white;
-    box-shadow: 0 2px 8px rgba(76,175,80,0.4);
+    box-shadow: 0 3px 8px rgba(67,160,71,0.3);
   }
 
-  .item .name { font-size: 15px; }
+  .item .name { font-size: 15px; flex: 1; margin-right: 10px; }
 
   .item .dot {
-    width: 24px;
-    height: 24px;
+    width: 26px;
+    height: 26px;
     border-radius: 50%;
     flex-shrink: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 12px;
+    font-size: 14px;
     font-weight: bold;
   }
 
-  /* Сообщение "Ты всё купил" */
-  .allDone {
-    display: none;
-    margin: 20px 16px;
-    background: linear-gradient(135deg, #4CAF50, #66BB6A);
-    color: white;
-    border-radius: 16px;
-    padding: 24px;
-    text-align: center;
-    box-shadow: 0 6px 20px rgba(76,175,80,0.4);
-    animation: popIn 0.5s ease;
-  }
-  .allDone .emoji { font-size: 50px; margin-bottom: 8px; }
-  .allDone .msg { font-size: 22px; font-weight: 700; }
-  .allDone .sub { font-size: 14px; opacity: 0.9; margin-top: 4px; }
-
-  @keyframes popIn {
-    0% { transform: scale(0.5); opacity: 0; }
-    100% { transform: scale(1); opacity: 1; }
-  }
-
-  /* Кнопка сброса */
+  /* КНОПКА СБРОСА */
   .resetBtn {
     display: block;
-    margin: 10px auto 30px;
-    padding: 12px 30px;
-    background: #ff9800;
-    color: white;
-    border: none;
-    border-radius: 25px;
+    margin: 30px auto 0;
+    padding: 14px 32px;
+    background: #fff;
+    color: #555;
+    border: 1px solid #ddd;
+    border-radius: 30px;
     font-size: 15px;
     font-weight: 600;
     cursor: pointer;
-    box-shadow: 0 3px 10px rgba(255,152,0,0.3);
-    transition: all 0.3s;
+    transition: all 0.2s;
   }
-  .resetBtn:hover { transform: scale(1.05); }
+  .resetBtn:hover { background: #f5f5f5; border-color: #bbb; }
   .resetBtn:active { transform: scale(0.95); }
 
-  /* Скрытый input */
   #cameraInput { display: none; }
 </style>
 </head>
 <body>
 
-<!-- СТАРТОВЫЙ ЭКРАН -->
-<div id="startScreen">
-  <h1>🛒 Список покупок</h1>
-  <p class="subtitle">Сфотографируй доску, чтобы видеть,<br>что нужно купить</p>
-  <button class="camera-btn-big" onclick="openCamera()">
-    <span class="cam-icon">📷</span>
-    <span class="cam-label">Сфоткать</span>
-  </button>
+<!-- ВЕРХНЯЯ ПАНЕЛЬ -->
+<div class="topBar">
+  <h2> Мой список</h2>
+  <button class="camera-btn-small" onclick="openCamera()" title="Сфоткать снова">📷</button>
 </div>
 
-<!-- ОСНОВНОЙ ЭКРАН -->
-<div id="mainScreen">
-  <div class="topBar">
-    <h2>🛒 Мой список</h2>
-    <button class="camera-btn-small" onclick="openCamera()" title="Сфоткать снова">📷</button>
-  </div>
-
-  <div class="photoWrap" id="photoWrap">
-    <img id="photoImg" src="" alt="Фото доски">
-  </div>
-
-  <div class="allDone" id="allDone">
-    <div class="emoji">🎉🎊</div>
-    <div class="msg">Ты всё купил!</div>
-    <div class="sub">Отличная работа!</div>
-  </div>
-
-  <div class="listContainer" id="listContainer"></div>
-
-  <button class="resetBtn" onclick="resetAll()">🔄 Сбросить всё</button>
+<!-- ФОТО ДОСКИ -->
+<div class="photoWrap" id="photoWrap">
+  <img id="photoImg" src="" alt="Фото доски">
 </div>
+
+<!-- СООБЩЕНИЕ ОБ УСПЕХЕ -->
+<div class="allDone" id="allDone">
+  <span class="emoji">🎊</span>
+  <div class="msg">Ты всё купил!</div>
+  <div class="sub">Отличная работа!</div>
+</div>
+
+<!-- СПИСОК ПРОДУКТОВ -->
+<div class="listContainer" id="listContainer"></div>
+
+<button class="resetBtn" onclick="resetAll()">🔄 Начать заново (сделать всё красным)</button>
 
 <input type="file" id="cameraInput" accept="image/*" capture="environment" onchange="handlePhoto(event)">
 
 <script>
-  // Все продукты с доски
+  // Список продуктов
   const allProducts = [
     "Хлеб","Молоко","Яйца","Картофель","Лук","Морковь",
     "Курица","Сыр","Мясо","Сметана","Кефир","Творог",
@@ -280,21 +214,26 @@
     "Пельмени","Лимон","Виноград"
   ];
 
-  // Состояние: true = куплено (зелёный), false = не куплено (красный)
   let items = {};
   let photoData = null;
 
-  // Загрузка из localStorage
+  // Загрузка состояния
   function loadState() {
     const saved = localStorage.getItem('shoppingList');
     if (saved) {
       items = JSON.parse(saved);
     } else {
-      // По умолчанию все зеленые (куплены), как на твоей доске в начале
-      allProducts.forEach(p => items[p] = true);
+      // ИСПРАВЛЕНИЕ: По умолчанию ВСЕ продукты КРАСНЫЕ (не куплены)
+      // Раньше было true (зеленые), поэтому приложение думало, что всё куплено
+      allProducts.forEach(p => items[p] = false); 
     }
+    
     const savedPhoto = localStorage.getItem('shoppingPhoto');
-    if (savedPhoto) photoData = savedPhoto;
+    if (savedPhoto) {
+      photoData = savedPhoto;
+      document.getElementById('photoImg').src = photoData;
+      document.getElementById('photoWrap').style.display = 'block';
+    }
   }
 
   function saveState() {
@@ -313,36 +252,30 @@
     const reader = new FileReader();
     reader.onload = function(ev) {
       photoData = ev.target.result;
-
       document.getElementById('photoImg').src = photoData;
       document.getElementById('photoWrap').style.display = 'block';
-
-      document.getElementById('startScreen').style.display = 'none';
-      document.getElementById('mainScreen').style.display = 'block';
-
       saveState();
-      renderList();
     };
     reader.readAsDataURL(file);
-    e.target.value = '';
+    e.target.value = ''; // сброс input для повторной съемки того же файла
   }
 
   function renderList() {
     const container = document.getElementById('listContainer');
     container.innerHTML = '';
 
-    let greenCount = 0;
+    let boughtCount = 0;
 
     allProducts.forEach(name => {
-      const bought = items[name] !== false;
-      if (bought) greenCount++;
+      // Если в памяти нет значения, считаем что false (красный)
+      const isBought = items[name] === true;
+      if (isBought) boughtCount++;
 
       const div = document.createElement('div');
-      div.className = 'item ' + (bought ? 'bought' : 'not-bought');
+      div.className = 'item ' + (isBought ? 'bought' : 'not-bought');
       div.onclick = () => toggleItem(name);
       
-      // Иконка галочки или крестика
-      const icon = bought ? '✓' : '✕';
+      const icon = isBought ? '✓' : ''; // Галочка только у купленных
       
       div.innerHTML = `
         <span class="name">${name}</span>
@@ -351,8 +284,9 @@
       container.appendChild(div);
     });
 
+    // Показываем сообщение только если ВСЕ куплены
     const allDone = document.getElementById('allDone');
-    if (greenCount === allProducts.length && allProducts.length > 0) {
+    if (boughtCount === allProducts.length && allProducts.length > 0) {
       allDone.style.display = 'block';
     } else {
       allDone.style.display = 'none';
@@ -360,28 +294,23 @@
   }
 
   function toggleItem(name) {
+    // Переключаем состояние: было красным -> стало зеленым, и наоборот
     items[name] = !items[name];
     saveState();
     renderList();
   }
 
   function resetAll() {
-    if (confirm('Сбросить все продукты на зелёные (куплено)?')) {
-      allProducts.forEach(p => items[p] = true);
+    if (confirm('Сделать весь список красным (не купленным)?')) {
+      allProducts.forEach(p => items[p] = false);
       saveState();
       renderList();
     }
   }
 
-  // Инициализация
+  // Запуск
   loadState();
-  if (photoData) {
-    document.getElementById('photoImg').src = photoData;
-    document.getElementById('photoWrap').style.display = 'block';
-    document.getElementById('startScreen').style.display = 'none';
-    document.getElementById('mainScreen').style.display = 'block';
-    renderList();
-  }
+  renderList();
 </script>
 </body>
 </html>

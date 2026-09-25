@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#4CAF50">
+<title>Список покупок</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Segoe UI', Tahoma, sans-serif;
+    background: #f0f2f5;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ===== СТАРТОВЫЙ ЭКРАН ===== */
+  #startScreen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    width: 100%;
+    padding: 20px;
+  }
+
+  #startScreen h1 {
+    font-size: 32px;
+    color: #333;
+    margin-bottom: 8px;
+  }
+
+  #startScreen .subtitle {
+    color: #888;
+    font-size: 16px;
+    margin-bottom: 50px;
+  }
+
+  .camera-btn-big {
+    width: 140px;
+    height: 140px;
+    border-radius: 50%;
+    border: 5px solid #4CAF50;
+    background: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    transition: all 0.3s;
+    box-shadow: 0 6px 25px rgba(76,175,80,0.35);
+  }
+
+  .camera-btn-big:hover { transform: scale(1.08); }
+  .camera-btn-big:active { transform: scale(0.93); }
+
+  .camera-btn-big .cam-icon { font-size: 48px; }
+  .camera-btn-big .cam-label {
+    font-size: 13px;
+    color: #4CAF50;
+    font-weight: 700;
+    margin-top: 4px;
+  }
+
+  /* ===== ОСНОВНОЙ ЭКРАН ===== */
+  #mainScreen { display: none; padding-bottom: 30px; }
+
+  .topBar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 16px;
+    background: white;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .topBar h2 { font-size: 20px; color: #333; }
+
+  .camera-btn-small {
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    border: 3px solid #4CAF50;
+    background: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    transition: all 0.3s;
+    box-shadow: 0 2px 8px rgba(76,175,80,0.3);
+  }
+  .camera-btn-small:hover { transform: scale(1.1); }
+  .camera-btn-small:active { transform: scale(0.9); }
+
+  /* Фото */
+  .photoWrap {
+    margin: 12px 16px;
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 3px 12px rgba(0,0,0,0.12);
+    display: none;
+  }
+  .photoWrap img { width: 100%; display: block; max-height: 220px; object-fit: cover; }
+
+  /* Статистика */
+  .stats {
+    display: flex;
+    gap: 10px;
+    margin: 0 16px 14px;
+  }
+  .stat-box {
+    flex: 1;
+    background: white;
+    border-radius: 12px;
+    padding: 12px;
+    text-align: center;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+  }
+  .stat-box .num { font-size: 26px; font-weight: 800; }
+  .stat-box .lbl { font-size: 12px; color: #999; margin-top: 2px; }
+  .stat-box.green .num { color: #4CAF50; }
+  .stat-box.red .num { color: #f44336; }
+
+  /* Прогресс-бар */
+  .progressWrap {
+    margin: 0 16px 14px;
+    background: #e0e0e0;
+    border-radius: 10px;
+    height: 10px;
+    overflow: hidden;
+  }
+  .progressBar {
+    height: 100%;
+    background: linear-gradient(90deg, #4CAF50, #66BB6A);
+    border-radius: 10px;
+    transition: width 0.5s ease;
+  }
+
+  /* Список */
+  .listContainer {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    padding: 0 16px;
+  }
+
+  .item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: white;
+    border-radius: 12px;
+    padding: 12px 14px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    cursor: pointer;
+    transition: all 0.2s;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .item:active { transform: scale(0.96); }
+
+  .item .name {
+    font-size: 15px;
+    font-weight: 600;
+    color: #333;
+  }
+
+  .item .dot {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+  }
+
+  .item.bought .dot {
+    background: #4CAF50;
+    box-shadow: 0 2px 8px rgba(76,175,80,0.4);
+  }
+  .item.bought .name { color: #4CAF50; }
+
+  .item.not-bought .dot {
+    background: #f44336;
+    box-shadow: 0 2px 8px rgba(244,67,54,0.4);
+  }
+  .item.not-bought .name { color: #f44336; }
+
+  /* Сообщение "Ты всё купил" */
+  .allDone {
+    display: none;
+    margin: 20px 16px;
+    background: linear-gradient(135deg, #4CAF50, #66BB6A);
+    color: white;
+    border-radius: 16px;
+    padding: 24px;
+    text-align: center;
+    box-shadow: 0 6px 20px rgba(76,175,80,0.4);
+    animation: popIn 0.5s ease;
+  }
+  .allDone .emoji { font-size: 50px; margin-bottom: 8px; }
+  .allDone .msg { font-size: 22px; font-weight: 700; }
+  .allDone .sub { font-size: 14px; opacity: 0.9; margin-top: 4px; }
+
+  @keyframes popIn {
+    0% { transform: scale(0.5); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  /* Кнопка сброса */
+  .resetBtn {
+    display: block;
+    margin: 20px auto;
+    padding: 12px 30px;
+    background: #ff9800;
+    color: white;
+    border: none;
+    border-radius: 25px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 3px 10px rgba(255,152,0,0.3);
+    transition: all 0.3s;
+  }
+  .resetBtn:hover { transform: scale(1.05); }
+  .resetBtn:active { transform: scale(0.95); }
+
+  /* Скрытый input */
+  #cameraInput { display: none; }
+</style>
+</head>
+<body>
+
+<!-- СТАРТОВЫЙ ЭКРАН -->
+<div id="startScreen">
+  <h1>🛒 Список покупок</h1>
+  <p class="subtitle">Сфотографируй доску со списком</p>
+  <button class="camera-btn-big" onclick="openCamera()">
+    <span class="cam-icon">📷</span>
+    <span class="cam-label">Сфоткать</span>
+  </button>
+</div>
+
+<!-- ОСНОВНОЙ ЭКРАН -->
+<div id="mainScreen">
+  <div class="topBar">
+    <h2>🛒 Мой список</h2>
+    <button class="camera-btn-small" onclick="openCamera()" title="Сфоткать снова">📷</button>
+  </div>
+
+  <div class="photoWrap" id="photoWrap">
+    <img id="photoImg" src="" alt="Фото доски">
+  </div>
+
+  <div class="stats">
+    <div class="stat-box green">
+      <div class="num" id="greenCount">0</div>
+      <div class="lbl">✅ Куплено</div>
+    </div>
+    <div class="stat-box red">
+      <div class="num" id="redCount">0</div>
+      <div class="lbl">❌ Осталось</div>
+    </div>
+  </div>
+
+  <div class="progressWrap">
+    <div class="progressBar" id="progressBar" style="width:0%"></div>
+  </div>
+
+  <div class="allDone" id="allDone">
+    <div class="emoji">🎉🎊</div>
+    <div class="msg">Ты всё купил!</div>
+    <div class="sub">Отличная работа!</div>
+  </div>
+
+  <div class="listContainer" id="listContainer"></div>
+
+  <button class="resetBtn" onclick="resetAll()">🔄 Сбросить всё</button>
+</div>
+
+<input type="file" id="cameraInput" accept="image/*" capture="environment" onchange="handlePhoto(event)">
+
+<script>
+  // Все продукты с доски
+  const allProducts = [
+    "Хлеб","Молоко","Яйца","Картофель","Лук","Морковь",
+    "Курица","Сыр","Мясо","Сметана","Кефир","Творог",
+    "Йогурт","Колбаса","Сосиски","Фарш","Рыба","Помидоры",
+    "Огурцы","Капуста","Сливки","Чеснок",
+    "Яблоки","Бананы","Макароны","Рис","Гречка","Каша",
+    "Мука","Сахар","Соль","Масло","Чай","Кофе","Вода",
+    "Сок","Печенье","Шоколад","Майонез","Кетчуп","Авокадо",
+    "Пельмени","Лимон","Виноград"
+  ];
+
+  // Состояние: true = куплено (зелёный), false = не куплено (красный)
+  let items = {};
+  let photoData = null;
+
+  // Загрузка из localStorage
+  function loadState() {
+    const saved = localStorage.getItem('shoppingList');
+    if (saved) {
+      items = JSON.parse(saved);
+    } else {
+      allProducts.forEach(p => items[p] = true); // по умолчанию все зелёные
+    }
+    const savedPhoto = localStorage.getItem('shoppingPhoto');
+    if (savedPhoto) photoData = savedPhoto;
+  }
+
+  function saveState() {
+    localStorage.setItem('shoppingList', JSON.stringify(items));
+    if (photoData) localStorage.setItem('shoppingPhoto', photoData);
+  }
+
+  function openCamera() {
+    document.getElementById('cameraInput').click();
+  }
+
+  function handlePhoto(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+      photoData = ev.target.result;
+
+      document.getElementById('photoImg').src = photoData;
+      document.getElementById('photoWrap').style.display = 'block';
+
+      document.getElementById('startScreen').style.display = 'none';
+      document.getElementById('mainScreen').style.display = 'block';
+
+      saveState();
+      renderList();
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  }
+
+  function renderList() {
+    const container = document.getElementById('listContainer');
+    container.innerHTML = '';
+
+    let green = 0, red = 0;
+
+    allProducts.forEach(name => {
+      const bought = items[name] !== false;
+      if (bought) green++; else red++;
+
+      const div = document.createElement('div');
+      div.className = 'item ' + (bought ? 'bought' : 'not-bought');
+      div.onclick = () => toggleItem(name);
+      div.innerHTML = `
+        <span class="name">${name}</span>
+        <span class="dot">${bought ? '✓' : '✗'}</span>
+      `;
+      container.appendChild(div);
+    });
+
+    document.getElementById('greenCount').textContent = green;
+    document.getElementById('redCount').textContent = red;
+
+    const pct = allProducts.length > 0 ? (green / allProducts.length * 100) : 0;
+    document.getElementById('progressBar').style.width = pct + '%';
+
+    const allDone = document.getElementById('allDone');
+    if (green === allProducts.length && allProducts.length > 0) {
+      allDone.style.display = 'block';
+    } else {
+      allDone.style.display = 'none';
+    }
+  }
+
+  function toggleItem(name) {
+    items[name] = !items[name];
+    saveState();
+    renderList();
+  }
+
+  function resetAll() {
+    if (confirm('Сбросить все продукты на зелёные (куплено)?')) {
+      allProducts.forEach(p => items[p] = true);
+      saveState();
+      renderList();
+    }
+  }
+
+  // Инициализация
+  loadState();
+  if (photoData) {
+    document.getElementById('photoImg').src = photoData;
+    document.getElementById('photoWrap').style.display = 'block';
+    document.getElementById('startScreen').style.display = 'none';
+    document.getElementById('mainScreen').style.display = 'block';
+    renderList();
+  }
+</script>
+</body>
+</html>

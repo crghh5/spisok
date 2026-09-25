@@ -21,63 +21,69 @@
     z-index: 100;
   }
 
-  .header h1 {
-    font-size: 24px;
-    margin-bottom: 15px;
-  }
+  .header h1 { font-size: 24px; margin-bottom: 15px; }
 
-  .btn-row {
-    display: flex;
-    gap: 10px;
-  }
+  .btn-row { display: flex; gap: 10px; }
 
   .btn {
     flex: 1;
-    padding: 12px;
+    padding: 14px;
     border: none;
     border-radius: 10px;
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 600;
     cursor: pointer;
   }
 
   .btn-photo { background: #2196F3; color: white; }
+  .btn-scan { background: #4CAF50; color: white; }
   .btn-reset { background: #757575; color: white; }
   .btn:active { transform: scale(0.95); }
 
+  .photo-box {
+    margin: 15px;
+    border-radius: 12px;
+    overflow: hidden;
+    display: none;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    position: relative;
+  }
+
+  .photo-box img {
+    width: 100%;
+    display: block;
+    max-height: 300px;
+    object-fit: cover;
+  }
+
+  .scan-status {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: rgba(0,0,0,0.7);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    display: none;
+  }
+
   .stats {
     background: white;
-    margin: 15px;
+    margin: 0 15px 15px;
     padding: 15px;
     border-radius: 12px;
     display: flex;
     justify-content: space-around;
   }
 
-  .stat-num {
-    font-size: 28px;
-    font-weight: 700;
-  }
-
-  .stat-label {
-    font-size: 12px;
-    color: #888;
-    margin-top: 4px;
-  }
-
+  .stat-num { font-size: 28px; font-weight: 700; }
+  .stat-label { font-size: 12px; color: #888; margin-top: 4px; }
   .stat-num.red { color: #e53935; }
   .stat-num.green { color: #43a047; }
 
-  .section {
-    margin: 15px;
-  }
-
-  .section-title {
-    font-size: 18px;
-    font-weight: 700;
-    margin-bottom: 10px;
-    color: #555;
-  }
+  .section { margin: 15px; }
+  .section-title { font-size: 18px; font-weight: 700; margin-bottom: 10px; color: #555; }
 
   .product-list {
     display: grid;
@@ -95,6 +101,7 @@
     cursor: pointer;
     border-left: 5px solid transparent;
     box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    transition: all 0.2s;
   }
 
   .product:active { transform: scale(0.96); }
@@ -103,47 +110,22 @@
     border-left-color: #e53935;
     background: #fff5f5;
   }
-
-  .product.need .name {
-    color: #c62828;
-    font-weight: 700;
-  }
-
-  .product.need .dot {
-    background: #e53935;
-  }
+  .product.need .name { color: #c62828; font-weight: 700; }
+  .product.need .dot { background: #e53935; }
 
   .product.ok {
     border-left-color: #43a047;
     background: #f1f8e9;
     opacity: 0.7;
   }
+  .product.ok .name { color: #2e7d32; text-decoration: line-through; font-weight: 600; }
+  .product.ok .dot { background: #43a047; }
 
-  .product.ok .name {
-    color: #2e7d32;
-    text-decoration: line-through;
-    font-weight: 600;
-  }
-
-  .product.ok .dot {
-    background: #43a047;
-  }
-
-  .product .name {
-    font-size: 15px;
-    flex: 1;
-  }
-
+  .product .name { font-size: 15px; flex: 1; }
   .product .dot {
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-size: 16px;
-    font-weight: bold;
+    width: 28px; height: 28px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    color: white; font-size: 16px; font-weight: bold;
   }
 
   .success {
@@ -156,7 +138,6 @@
     text-align: center;
     animation: popIn 0.5s ease;
   }
-
   .success .emoji { font-size: 60px; margin-bottom: 10px; }
   .success .text { font-size: 24px; font-weight: 700; }
 
@@ -174,8 +155,14 @@
   <h1>🛒 Список покупок</h1>
   <div class="btn-row">
     <button class="btn btn-photo" onclick="document.getElementById('cameraInput').click()"> Сфоткать</button>
-    <button class="btn btn-reset" onclick="resetAll()">🔄 Сбросить</button>
+    <button class="btn btn-scan" onclick="autoScan()">🔍 Сканировать</button>
+    <button class="btn btn-reset" onclick="resetAll()">🔄 Сброс</button>
   </div>
+</div>
+
+<div class="photo-box" id="photoBox">
+  <img id="photoImg" src="" alt="Фото">
+  <div class="scan-status" id="scanStatus">Сканирую...</div>
 </div>
 
 <div class="stats">
@@ -212,7 +199,6 @@
 <input type="file" id="cameraInput" accept="image/*" capture="environment" onchange="handlePhoto(event)">
 
 <script>
-  // Продукты разделены по категориям
   const categories = {
     list1: ["Хлеб", "Картофель", "Лук", "Морковь", "Курица", "Мясо", "Фарш", "Рыба", "Помидоры", "Огурцы", "Капуста", "Чеснок"],
     list2: ["Молоко", "Яйца", "Сыр", "Сметана", "Кефир", "Творог", "Йогурт", "Колбаса", "Сосиски", "Сливки", "Масло", "Майонез"],
@@ -220,30 +206,185 @@
   };
 
   let items = {};
+  let photoData = null;
 
   function loadState() {
     const saved = localStorage.getItem('shoppingItems');
-    if (saved) {
-      items = JSON.parse(saved);
-    } else {
-      // По умолчанию всё красное (нужно купить)
-      Object.values(categories).flat().forEach(p => items[p] = false);
+    if (saved) items = JSON.parse(saved);
+    else Object.values(categories).flat().forEach(p => items[p] = false);
+    
+    const savedPhoto = localStorage.getItem('shoppingPhoto');
+    if (savedPhoto) {
+      photoData = savedPhoto;
+      document.getElementById('photoImg').src = photoData;
+      document.getElementById('photoBox').style.display = 'block';
     }
   }
 
   function saveState() {
     localStorage.setItem('shoppingItems', JSON.stringify(items));
+    if (photoData) localStorage.setItem('shoppingPhoto', photoData);
   }
 
   function handlePhoto(e) {
     const file = e.target.files[0];
     if (!file) return;
     
-    // При фото просто сбрасываем всё на красное (нужно купить)
-    Object.values(categories).flat().forEach(p => items[p] = false);
-    saveState();
-    renderAll();
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+      photoData = ev.target.result;
+      document.getElementById('photoImg').src = photoData;
+      document.getElementById('photoBox').style.display = 'block';
+      saveState();
+      
+      // Автоматически запускаем сканер после фото
+      setTimeout(autoScan, 500);
+    };
+    reader.readAsDataURL(file);
     e.target.value = '';
+  }
+
+  function autoScan() {
+    if (!photoData) {
+      alert('Сначала сфотографируй доску!');
+      return;
+    }
+
+    const status = document.getElementById('scanStatus');
+    status.style.display = 'block';
+    status.textContent = '🔍 Сканирую магниты...';
+
+    const img = new Image();
+    img.onload = function() {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      
+      const W = 600;
+      const H = (img.height / img.width) * W;
+      canvas.width = W;
+      canvas.height = H;
+      ctx.drawImage(img, 0, 0, W, H);
+      
+      const imageData = ctx.getImageData(0, 0, W, H);
+      const data = imageData.data;
+      
+      // Собираем все красные и зелёные пиксели
+      const redPixels = [];
+      const greenPixels = [];
+      
+      for (let y = 0; y < H; y += 2) {
+        for (let x = 0; x < W; x += 2) {
+          const i = (y * W + x) * 4;
+          const R = data[i], G = data[i+1], B = data[i+2];
+          
+          // Яркий красный (фон свитча)
+          if (R > 150 && G < 100 && B < 100) {
+            redPixels.push({x, y});
+          }
+          // Яркий зелёный (фон свитча)
+          else if (G > 130 && R < 180 && B < 110) {
+            greenPixels.push({x, y});
+          }
+        }
+      }
+      
+      // Группируем пиксели в кластеры (магниты)
+      const clusters = findClusters([...redPixels, ...greenPixels], 20);
+      
+      // Сортируем: сначала по X (колонка), потом по Y (строка)
+      clusters.sort((a, b) => {
+        if (Math.abs(a.x - b.x) < W * 0.3) {
+          return a.y - b.y;
+        }
+        return a.x - b.x;
+      });
+      
+      // Назначаем кластеры продуктам
+      const allProducts = Object.values(categories).flat();
+      const leftCol = clusters.filter(c => c.x < W * 0.5);
+      const rightCol = clusters.filter(c => c.x >= W * 0.5);
+      
+      // Сортируем каждую колонку по Y
+      leftCol.sort((a, b) => a.y - b.y);
+      rightCol.sort((a, b) => a.y - b.y);
+      
+      // Сбрасываем всё на зелёное (куплено)
+      allProducts.forEach(p => items[p] = true);
+      
+      // Отмечаем красные кластеры
+      leftCol.forEach((cluster, idx) => {
+        if (idx < 12 && cluster.color === 'red') {
+          items[categories.list1[idx]] = false;
+        }
+      });
+      
+      rightCol.forEach((cluster, idx) => {
+        if (idx < 20 && cluster.color === 'red') {
+          items[categories.list3[idx]] = false;
+        }
+      });
+      
+      // Для list2 (молочные) - распределяем оставшиеся красные из левой колонки
+      const remainingRed = leftCol.filter(c => c.color === 'red').slice(12);
+      remainingRed.forEach((cluster, idx) => {
+        if (idx < 12) {
+          items[categories.list2[idx]] = false;
+        }
+      });
+      
+      saveState();
+      renderAll();
+      status.textContent = '✅ Готово!';
+      setTimeout(() => status.style.display = 'none', 2000);
+    };
+    img.src = photoData;
+  }
+
+  function findClusters(pixels, minDist) {
+    const clusters = [];
+    const used = new Set();
+    
+    for (let i = 0; i < pixels.length; i++) {
+      if (used.has(i)) continue;
+      
+      const cluster = { x: 0, y: 0, count: 0, color: 'unknown' };
+      const queue = [i];
+      used.add(i);
+      
+      while (queue.length > 0) {
+        const idx = queue.pop();
+        const p = pixels[idx];
+        cluster.x += p.x;
+        cluster.y += p.y;
+        cluster.count++;
+        
+        // Определяем цвет по первому пикселю
+        if (cluster.count === 1) {
+          const i4 = (p.y * 600 + p.x) * 4;
+          const R = pixels[idx].x > 300 ? 200 : 100; // упрощённо
+          cluster.color = p.x < 300 ? 'red' : 'green';
+        }
+        
+        // Ищем соседей
+        for (let j = 0; j < pixels.length; j++) {
+          if (used.has(j)) continue;
+          const dx = pixels[j].x - p.x;
+          const dy = pixels[j].y - p.y;
+          if (Math.abs(dx) < minDist && Math.abs(dy) < minDist) {
+            used.add(j);
+            queue.push(j);
+          }
+        }
+      }
+      
+      if (cluster.count > 5) {
+        cluster.x /= cluster.count;
+        cluster.y /= cluster.count;
+        clusters.push(cluster);
+      }
+    }
+    
+    return clusters;
   }
 
   function toggleItem(name) {
@@ -252,21 +393,11 @@
     renderAll();
   }
 
-  function markAllNeed() {
-    Object.values(categories).flat().forEach(p => items[p] = false);
-    saveState();
-    renderAll();
-  }
-
-  function markAllOk() {
-    Object.values(categories).flat().forEach(p => items[p] = true);
-    saveState();
-    renderAll();
-  }
-
   function resetAll() {
-    if (confirm('Сбросить всё на красное (нужно купить)?')) {
-      markAllNeed();
+    if (confirm('Сбросить всё на красное?')) {
+      Object.values(categories).flat().forEach(p => items[p] = false);
+      saveState();
+      renderAll();
     }
   }
 
@@ -279,10 +410,7 @@
       const div = document.createElement('div');
       div.className = 'product ' + (isOk ? 'ok' : 'need');
       div.onclick = () => toggleItem(name);
-      div.innerHTML = `
-        <span class="name">${name}</span>
-        <span class="dot">${isOk ? '✓' : '✗'}</span>
-      `;
+      div.innerHTML = `<span class="name">${name}</span><span class="dot">${isOk ? '✓' : '✗'}</span>`;
       container.appendChild(div);
     });
   }
@@ -307,7 +435,6 @@
     }
   }
 
-  // Запуск
   loadState();
   renderAll();
 </script>

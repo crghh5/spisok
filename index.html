@@ -7,170 +7,100 @@
 <title>Список покупок</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f4f6f9; color: #333; padding-bottom: 40px; }
 
-  body {
-    font-family: 'Segoe UI', Tahoma, sans-serif;
-    background: #f4f6f9;
-    min-height: 100vh;
-    color: #333;
-    padding-bottom: 40px;
-  }
-
-  /* ===== ВЕРХНЯЯ ПАНЕЛЬ ===== */
+  /* Верхняя панель */
   .topBar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 16px 20px;
-    background: white;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-    position: sticky;
-    top: 0;
-    z-index: 100;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 16px 20px; background: white;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 100;
   }
-
   .topBar h2 { font-size: 22px; font-weight: 700; color: #2c3e50; }
-
-  .camera-btn-small {
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
-    border: 2px solid #4CAF50;
-    background: white;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 20px;
-    transition: all 0.2s;
-  }
-  .camera-btn-small:active { transform: scale(0.9); background: #f0f0f0; }
-
-  /* ===== ФОТО ===== */
-  .photoWrap {
-    margin: 16px 20px;
-    border-radius: 16px;
-    overflow: hidden;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-    display: none;
-    background: #eee;
-  }
   
-  .photoWrap img { 
-    width: 100%; 
-    display: block; 
-    max-height: 250px; 
-    object-fit: cover;
-    /* Убрал grayscale, чтобы цвета были реальными */
+  .icon-btn {
+    width: 44px; height: 44px; border-radius: 50%; border: 2px solid #4CAF50;
+    background: white; cursor: pointer; display: flex; align-items: center;
+    justify-content: center; font-size: 20px; transition: all 0.2s; margin-left: 8px;
   }
+  .icon-btn:active { transform: scale(0.9); background: #f0f0f0; }
 
-  /* ===== СООБЩЕНИЕ "ВСЁ КУПИЛ" ===== */
+  /* Фото */
+  .photoWrap {
+    margin: 16px 20px; border-radius: 16px; overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1); display: none; background: #eee;
+  }
+  .photoWrap img { width: 100%; display: block; max-height: 250px; object-fit: cover; }
+
+  /* Сообщение "Всё купил" */
   .allDone {
-    display: none;
-    margin: 0 20px 20px;
+    display: none; margin: 0 20px 20px;
     background: linear-gradient(135deg, #43a047, #66bb6a);
-    color: white;
-    border-radius: 16px;
-    padding: 24px;
-    text-align: center;
-    box-shadow: 0 8px 20px rgba(76,175,80,0.3);
-    animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    color: white; border-radius: 16px; padding: 24px; text-align: center;
+    box-shadow: 0 8px 20px rgba(76,175,80,0.3); animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   }
   .allDone .emoji { font-size: 48px; margin-bottom: 10px; display: block; }
   .allDone .msg { font-size: 24px; font-weight: 800; margin-bottom: 4px; }
-  .allDone .sub { font-size: 15px; opacity: 0.9; }
+  @keyframes popIn { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
 
-  @keyframes popIn {
-    0% { transform: scale(0.8); opacity: 0; }
-    100% { transform: scale(1); opacity: 1; }
-  }
-
-  /* ===== СПИСОК ===== */
-  .listContainer {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-    padding: 0 20px;
-  }
-
+  /* Список */
+  .listContainer { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 0 20px; }
   .item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    background: white;
-    border-radius: 14px;
-    padding: 16px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-    cursor: pointer;
-    transition: all 0.2s;
-    user-select: none;
-    -webkit-tap-highlight-color: transparent;
-    border-left: 6px solid transparent;
+    display: flex; align-items: center; justify-content: space-between;
+    background: white; border-radius: 14px; padding: 16px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04); cursor: pointer;
+    transition: all 0.2s; user-select: none; border-left: 6px solid transparent;
   }
-  
   .item:active { transform: scale(0.96); }
-
-  /* КРАСНЫЙ (НЕ КУПЛЕНО) */
-  .item.not-bought {
-    border-left-color: #e53935;
-    background: #fffafa;
-  }
+  
+  /* Стили состояний */
+  .item.not-bought { border-left-color: #e53935; background: #fffafa; }
   .item.not-bought .name { color: #c62828; font-weight: 700; }
-  .item.not-bought .dot {
-    background: #e53935;
-    color: white;
-    box-shadow: 0 3px 8px rgba(229,57,53,0.3);
-  }
-
-  /* ЗЕЛЕНЫЙ (КУПЛЕНО) */
-  .item.bought {
-    border-left-color: #43a047;
-    background: #f1f8e9;
-    opacity: 0.8; /* Чуть бледнее, когда куплено */
-  }
-  .item.bought .name { 
-    color: #2e7d32; 
-    font-weight: 600; 
-    text-decoration: line-through; /* Зачеркиваем купленное */
-    text-decoration-color: #81c784;
-  }
-  .item.bought .dot {
-    background: #43a047;
-    color: white;
-    box-shadow: 0 3px 8px rgba(67,160,71,0.3);
-  }
+  .item.not-bought .dot { background: #e53935; color: white; box-shadow: 0 3px 8px rgba(229,57,53,0.3); }
+  
+  .item.bought { border-left-color: #43a047; background: #f1f8e9; opacity: 0.9; }
+  .item.bought .name { color: #2e7d32; font-weight: 600; text-decoration: line-through; text-decoration-color: #81c784; }
+  .item.bought .dot { background: #43a047; color: white; box-shadow: 0 3px 8px rgba(67,160,71,0.3); }
 
   .item .name { font-size: 15px; flex: 1; margin-right: 10px; }
+  .item .dot { width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold; }
 
-  .item .dot {
-    width: 26px;
-    height: 26px;
-    border-radius: 50%;
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 14px;
-    font-weight: bold;
+  /* Кнопки управления */
+  .controls { display: flex; gap: 10px; padding: 20px; justify-content: center; }
+  .btn {
+    padding: 12px 20px; border-radius: 25px; border: none; font-size: 14px; font-weight: 600; cursor: pointer;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1); transition: all 0.2s;
   }
+  .btn-setup { background: #2196F3; color: white; }
+  .btn-reset { background: #fff; color: #555; border: 1px solid #ddd; }
+  .btn:active { transform: scale(0.95); }
 
-  /* КНОПКА СБРОСА */
-  .resetBtn {
-    display: block;
-    margin: 30px auto 0;
-    padding: 14px 32px;
-    background: #fff;
-    color: #555;
-    border: 1px solid #ddd;
-    border-radius: 30px;
-    font-size: 15px;
-    font-weight: 600;
-    cursor: pointer;
+  /* Модальное окно настройки */
+  .modal-overlay {
+    display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;
+  }
+  .modal {
+    background: white; width: 90%; max-width: 400px; max-height: 80vh;
+    border-radius: 20px; padding: 20px; display: flex; flex-direction: column;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+  }
+  .modal h3 { margin-bottom: 15px; text-align: center; color: #333; }
+  .modal-list { overflow-y: auto; flex: 1; margin-bottom: 20px; padding-right: 5px; }
+  .modal-item {
+    display: flex; align-items: center; padding: 12px; border-bottom: 1px solid #eee;
+    cursor: pointer; user-select: none;
+  }
+  .modal-item:last-child { border-bottom: none; }
+  .modal-item .check {
+    width: 24px; height: 24px; border: 2px solid #ccc; border-radius: 6px;
+    margin-right: 15px; display: flex; align-items: center; justify-content: center;
     transition: all 0.2s;
   }
-  .resetBtn:hover { background: #f5f5f5; border-color: #bbb; }
-  .resetBtn:active { transform: scale(0.95); }
-
+  .modal-item.selected .check { background: #e53935; border-color: #e53935; color: white; }
+  .modal-item.selected .m-name { color: #e53935; font-weight: 600; }
+  .modal-actions { display: flex; gap: 10px; }
+  .modal-actions .btn { flex: 1; text-align: center; padding: 14px; }
+  
   #cameraInput { display: none; }
 </style>
 </head>
@@ -178,8 +108,11 @@
 
 <!-- ВЕРХНЯЯ ПАНЕЛЬ -->
 <div class="topBar">
-  <h2> Мой список</h2>
-  <button class="camera-btn-small" onclick="openCamera()" title="Сфоткать снова">📷</button>
+  <h2>🛒 Мой список</h2>
+  <div style="display:flex;">
+    <button class="icon-btn" onclick="openSetupModal()" title="Настроить цвета под доску">️</button>
+    <button class="icon-btn" onclick="openCamera()" title="Сфоткать снова">📷</button>
+  </div>
 </div>
 
 <!-- ФОТО ДОСКИ -->
@@ -197,34 +130,50 @@
 <!-- СПИСОК ПРОДУКТОВ -->
 <div class="listContainer" id="listContainer"></div>
 
-<button class="resetBtn" onclick="resetAll()">🔄 Начать заново (сделать всё красным)</button>
+<!-- КНОПКИ -->
+<div class="controls">
+  <button class="btn btn-reset" onclick="resetAll()">🔄 Сбросить (всё красное)</button>
+</div>
+
+<!-- МОДАЛЬНОЕ ОКНО НАСТРОЙКИ -->
+<div class="modal-overlay" id="setupModal">
+  <div class="modal">
+    <h3>Что сейчас КРАСНОЕ на доске?</h3>
+    <p style="font-size:13px; color:#666; margin-bottom:10px; text-align:center;">Нажми на продукты, которые нужно купить</p>
+    <div class="modal-list" id="modalList"></div>
+    <div class="modal-actions">
+      <button class="btn btn-reset" onclick="closeSetupModal()">Отмена</button>
+      <button class="btn btn-setup" onclick="saveSetup()">Готово</button>
+    </div>
+  </div>
+</div>
 
 <input type="file" id="cameraInput" accept="image/*" capture="environment" onchange="handlePhoto(event)">
 
 <script>
-  // Список продуктов
+  // ИСПРАВЛЕННЫЙ ПОРЯДОК: Сначала левый столбец, потом правый (как на доске)
   const allProducts = [
+    // Левый столбец
     "Хлеб","Молоко","Яйца","Картофель","Лук","Морковь",
     "Курица","Сыр","Мясо","Сметана","Кефир","Творог",
     "Йогурт","Колбаса","Сосиски","Фарш","Рыба","Помидоры",
     "Огурцы","Капуста","Сливки","Чеснок",
+    // Правый столбец
     "Яблоки","Бананы","Макароны","Рис","Гречка","Каша",
     "Мука","Сахар","Соль","Масло","Чай","Кофе","Вода",
     "Сок","Печенье","Шоколад","Майонез","Кетчуп","Авокадо",
     "Пельмени","Лимон","Виноград"
   ];
 
-  let items = {};
+  let items = {}; // true = куплено (зеленое), false = не куплено (красное)
   let photoData = null;
+  let tempSetup = {}; 
 
-  // Загрузка состояния
   function loadState() {
     const saved = localStorage.getItem('shoppingList');
     if (saved) {
       items = JSON.parse(saved);
     } else {
-      // ИСПРАВЛЕНИЕ: По умолчанию ВСЕ продукты КРАСНЫЕ (не куплены)
-      // Раньше было true (зеленые), поэтому приложение думало, что всё куплено
       allProducts.forEach(p => items[p] = false); 
     }
     
@@ -248,7 +197,6 @@
   function handlePhoto(e) {
     const file = e.target.files[0];
     if (!file) return;
-
     const reader = new FileReader();
     reader.onload = function(ev) {
       photoData = ev.target.result;
@@ -257,17 +205,15 @@
       saveState();
     };
     reader.readAsDataURL(file);
-    e.target.value = ''; // сброс input для повторной съемки того же файла
+    e.target.value = '';
   }
 
   function renderList() {
     const container = document.getElementById('listContainer');
     container.innerHTML = '';
-
     let boughtCount = 0;
 
     allProducts.forEach(name => {
-      // Если в памяти нет значения, считаем что false (красный)
       const isBought = items[name] === true;
       if (isBought) boughtCount++;
 
@@ -275,16 +221,12 @@
       div.className = 'item ' + (isBought ? 'bought' : 'not-bought');
       div.onclick = () => toggleItem(name);
       
-      const icon = isBought ? '✓' : ''; // Галочка только у купленных
+      const icon = isBought ? '✓' : ''; 
       
-      div.innerHTML = `
-        <span class="name">${name}</span>
-        <span class="dot">${icon}</span>
-      `;
+      div.innerHTML = `<span class="name">${name}</span><span class="dot">${icon}</span>`;
       container.appendChild(div);
     });
 
-    // Показываем сообщение только если ВСЕ куплены
     const allDone = document.getElementById('allDone');
     if (boughtCount === allProducts.length && allProducts.length > 0) {
       allDone.style.display = 'block';
@@ -294,18 +236,61 @@
   }
 
   function toggleItem(name) {
-    // Переключаем состояние: было красным -> стало зеленым, и наоборот
     items[name] = !items[name];
     saveState();
     renderList();
   }
 
   function resetAll() {
-    if (confirm('Сделать весь список красным (не купленным)?')) {
+    if (confirm('Сделать весь список красным (как будто ничего не куплено)?')) {
       allProducts.forEach(p => items[p] = false);
       saveState();
       renderList();
     }
+  }
+
+  // --- ЛОГИКА НАСТРОЙКИ (MODAL) ---
+  function openSetupModal() {
+    tempSetup = {...items}; 
+    const list = document.getElementById('modalList');
+    list.innerHTML = '';
+    
+    allProducts.forEach(name => {
+      const div = document.createElement('div');
+      const isSelected = tempSetup[name] === false; // Выбрано, если НЕ куплено (красное)
+      div.className = 'modal-item ' + (isSelected ? 'selected' : '');
+      div.onclick = () => {
+        const isNowSelected = !div.classList.contains('selected');
+        if(isNowSelected) {
+            div.classList.add('selected');
+            div.querySelector('.check').innerHTML = '✓';
+            tempSetup[name] = false; // Устанавливаем как "Не куплено"
+        } else {
+            div.classList.remove('selected');
+            div.querySelector('.check').innerHTML = '';
+            tempSetup[name] = true; // Устанавливаем как "Куплено"
+        }
+      };
+      
+      div.innerHTML = `
+        <div class="check">${isSelected ? '✓' : ''}</div>
+        <span class="m-name">${name}</span>
+      `;
+      list.appendChild(div);
+    });
+    
+    document.getElementById('setupModal').style.display = 'flex';
+  }
+
+  function closeSetupModal() {
+    document.getElementById('setupModal').style.display = 'none';
+  }
+
+  function saveSetup() {
+    items = {...tempSetup};
+    saveState();
+    renderList();
+    closeSetupModal();
   }
 
   // Запуск

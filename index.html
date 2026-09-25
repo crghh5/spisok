@@ -6,88 +6,24 @@
 <title>Список покупок</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { 
-    font-family: -apple-system, sans-serif; 
-    background: #f5f5f5; 
-    padding-bottom: 100px;
-  }
+  body { font-family: -apple-system, sans-serif; background: #f5f5f5; padding-bottom: 100px; }
 
-  .header {
-    background: white;
-    padding: 20px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    position: sticky;
-    top: 0;
-    z-index: 100;
-  }
-
+  .header { background: white; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 100; }
   .header h1 { font-size: 24px; margin-bottom: 15px; }
-
   .btn-row { display: flex; gap: 10px; }
-
-  .btn {
-    flex: 1;
-    padding: 14px;
-    border: none;
-    border-radius: 10px;
-    font-size: 15px;
-    font-weight: 600;
-    cursor: pointer;
-  }
-
+  .btn { flex: 1; padding: 14px; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; }
   .btn-photo { background: #2196F3; color: white; }
   .btn-reset { background: #757575; color: white; }
   .btn:active { transform: scale(0.95); }
 
-  .photo-box {
-    margin: 15px;
-    border-radius: 12px;
-    overflow: hidden;
-    display: none;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    position: relative;
-  }
+  .photo-box { margin: 15px; border-radius: 12px; overflow: hidden; display: none; box-shadow: 0 2px 10px rgba(0,0,0,0.1); position: relative; }
+  .photo-box img { width: 100%; display: block; max-height: 300px; object-fit: cover; }
 
-  .photo-box img {
-    width: 100%;
-    display: block;
-    max-height: 300px;
-    object-fit: cover;
-  }
-
-  .scan-overlay {
-    position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0,0,0,0.7);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
-    color: white;
-    font-size: 16px;
-    font-weight: 600;
-  }
-
-  .spinner {
-    width: 40px; height: 40px;
-    border: 4px solid rgba(255,255,255,0.3);
-    border-top: 4px solid #4CAF50;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-    margin-bottom: 10px;
-  }
-
+  .scan-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; flex-direction: column; color: white; font-size: 16px; font-weight: 600; }
+  .spinner { width: 40px; height: 40px; border: 4px solid rgba(255,255,255,0.3); border-top: 4px solid #4CAF50; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 10px; }
   @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-  .stats {
-    background: white;
-    margin: 0 15px 15px;
-    padding: 15px;
-    border-radius: 12px;
-    display: flex;
-    justify-content: space-around;
-  }
-
+  .stats { background: white; margin: 0 15px 15px; padding: 15px; border-radius: 12px; display: flex; justify-content: space-around; }
   .stat-num { font-size: 28px; font-weight: 700; }
   .stat-label { font-size: 12px; color: #888; margin-top: 4px; }
   .stat-num.red { color: #e53935; }
@@ -95,67 +31,23 @@
 
   .section { margin: 15px; }
   .section-title { font-size: 18px; font-weight: 700; margin-bottom: 10px; color: #555; }
+  .product-list { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
-  .product-list {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-  }
-
-  .product {
-    background: white;
-    border-radius: 12px;
-    padding: 16px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    cursor: pointer;
-    border-left: 5px solid transparent;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-    transition: all 0.2s;
-  }
-
+  .product { background: white; border-radius: 12px; padding: 16px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; border-left: 5px solid transparent; box-shadow: 0 2px 6px rgba(0,0,0,0.05); transition: all 0.2s; }
   .product:active { transform: scale(0.96); }
-
-  .product.need {
-    border-left-color: #e53935;
-    background: #fff5f5;
-  }
+  .product.need { border-left-color: #e53935; background: #fff5f5; }
   .product.need .name { color: #c62828; font-weight: 700; }
   .product.need .dot { background: #e53935; }
-
-  .product.ok {
-    border-left-color: #43a047;
-    background: #f1f8e9;
-    opacity: 0.7;
-  }
+  .product.ok { border-left-color: #43a047; background: #f1f8e9; opacity: 0.7; }
   .product.ok .name { color: #2e7d32; text-decoration: line-through; font-weight: 600; }
   .product.ok .dot { background: #43a047; }
-
   .product .name { font-size: 15px; flex: 1; }
-  .product .dot {
-    width: 28px; height: 28px; border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    color: white; font-size: 16px; font-weight: bold;
-  }
+  .product .dot { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 16px; font-weight: bold; }
 
-  .success {
-    display: none;
-    background: linear-gradient(135deg, #43a047, #66bb6a);
-    color: white;
-    margin: 15px;
-    padding: 30px;
-    border-radius: 16px;
-    text-align: center;
-    animation: popIn 0.5s ease;
-  }
+  .success { display: none; background: linear-gradient(135deg, #43a047, #66bb6a); color: white; margin: 15px; padding: 30px; border-radius: 16px; text-align: center; animation: popIn 0.5s ease; }
   .success .emoji { font-size: 60px; margin-bottom: 10px; }
   .success .text { font-size: 24px; font-weight: 700; }
-
-  @keyframes popIn {
-    0% { transform: scale(0.5); opacity: 0; }
-    100% { transform: scale(1); opacity: 1; }
-  }
+  @keyframes popIn { 0% { transform: scale(0.5); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
 
   #cameraInput { display: none; }
 </style>
@@ -174,19 +66,13 @@
   <img id="photoImg" src="" alt="Фото">
   <div class="scan-overlay" id="scanOverlay">
     <div class="spinner"></div>
-    <div id="scanText">Ищу магниты...</div>
+    <div id="scanText">Ищу доску...</div>
   </div>
 </div>
 
 <div class="stats">
-  <div>
-    <div class="stat-num red" id="needCount">0</div>
-    <div class="stat-label">Нужно купить</div>
-  </div>
-  <div>
-    <div class="stat-num green" id="okCount">0</div>
-    <div class="stat-label">Куплено</div>
-  </div>
+  <div><div class="stat-num red" id="needCount">0</div><div class="stat-label">Нужно купить</div></div>
+  <div><div class="stat-num green" id="okCount">0</div><div class="stat-label">Куплено</div></div>
 </div>
 
 <div class="success" id="successMsg">
@@ -245,15 +131,15 @@
       const overlay = document.getElementById('scanOverlay');
       const scanText = document.getElementById('scanText');
       overlay.style.display = 'flex';
-      scanText.textContent = 'Ищу магниты...';
+      scanText.textContent = 'Ищу доску...';
       
-      setTimeout(() => scanMagnets(), 500);
+      setTimeout(() => scanBoard(), 500);
     };
     reader.readAsDataURL(file);
     e.target.value = '';
   }
 
-  function scanMagnets() {
+  function scanBoard() {
     if (!photoData) return;
 
     const img = new Image();
@@ -261,7 +147,8 @@
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       
-      const W = 600;
+      // Рабочее разрешение
+      const W = 500;
       const H = (img.height / img.width) * W;
       canvas.width = W;
       canvas.height = H;
@@ -272,65 +159,63 @@
       
       const scanText = document.getElementById('scanText');
       
-      // ШАГ 1: Найти все красные и зелёные пиксели (магниты)
-      scanText.textContent = 'Нахожу магниты...';
+      // ШАГ 1: Найти доску (самый большой светлый прямоугольник)
+      scanText.textContent = 'Нахожу доску...';
+      const board = findBoard(data, W, H);
       
-      const magnets = [];
-      
-      for (let y = 0; y < H; y += 3) {
-        for (let x = 0; x < W; x += 3) {
-          const i = (y * W + x) * 4;
-          const R = data[i], G = data[i+1], B = data[i+2];
-          
-          // Красный магнит
-          if (R > 140 && G < 110 && B < 110 && R > G + 30) {
-            magnets.push({x, y, color: 'red'});
-          }
-          // Зелёный магнит
-          else if (G > 120 && R < 180 && B < 120 && G > B + 20) {
-            magnets.push({x, y, color: 'green'});
-          }
-        }
-      }
-      
-      if (magnets.length < 20) {
-        scanText.textContent = 'Магниты не найдены. Тапни вручную.';
+      if (!board) {
+        scanText.textContent = 'Доска не найдена. Тапни вручную.';
         setTimeout(() => document.getElementById('scanOverlay').style.display = 'none', 3000);
         return;
       }
       
-      // ШАГ 2: Сгруппировать магниты в кластеры
-      scanText.textContent = 'Группирую...';
+      // ШАГ 2: Сканировать магниты по сетке
+      scanText.textContent = 'Сканирую магниты...';
       
-      const clusters = clusterMagnets(magnets, 15);
+      const { top, bottom, left, right } = board;
+      const boardW = right - left;
+      const boardH = bottom - top;
+      const rows = 22;
+      const rowH = boardH / rows;
       
-      // ШАГ 3: Разделить на левую и правую колонки
-      const centerX = W / 2;
-      const leftMagnets = clusters.filter(c => c.x < centerX);
-      const rightMagnets = clusters.filter(c => c.x >= centerX);
-      
-      // Сортировать по Y (сверху вниз)
-      leftMagnets.sort((a, b) => a.y - b.y);
-      rightMagnets.sort((a, b) => a.y - b.y);
-      
-      // ШАГ 4: Назначить продукты
-      scanText.textContent = 'Распределяю...';
-      
-      // Сбросить всё на зелёное (куплено)
+      // Сбросить всё
       [...leftColumn, ...rightColumn].forEach(p => items[p] = false);
       
-      // Отметить красные магниты
-      leftMagnets.forEach((cluster, idx) => {
-        if (idx < leftColumn.length && cluster.color === 'red') {
-          items[leftColumn[idx]] = true;
+      // Сканируем каждую строку
+      for (let r = 0; r < rows; r++) {
+        const y1 = Math.floor(top + r * rowH + rowH * 0.3);
+        const y2 = Math.floor(top + (r + 1) * rowH - rowH * 0.3);
+        
+        // Левая колонка - магнит в правой части ячейки
+        const col1X1 = Math.floor(left + boardW * 0.35);
+        const col1X2 = Math.floor(left + boardW * 0.48);
+        
+        let red1 = 0, green1 = 0;
+        for (let y = y1; y < y2; y += 2) {
+          for (let x = col1X1; x < col1X2; x += 2) {
+            const i = (y * W + x) * 4;
+            const R = data[i], G = data[i+1], B = data[i+2];
+            if (isRed(R, G, B)) red1++;
+            else if (isGreen(R, G, B)) green1++;
+          }
         }
-      });
-      
-      rightMagnets.forEach((cluster, idx) => {
-        if (idx < rightColumn.length && cluster.color === 'red') {
-          items[rightColumn[idx]] = true;
+        items[leftColumn[r]] = red1 > green1 && red1 > 5;
+        
+        // Правая колонка
+        const col2X1 = Math.floor(left + boardW * 0.85);
+        const col2X2 = Math.floor(left + boardW * 0.98);
+        
+        let red2 = 0, green2 = 0;
+        for (let y = y1; y < y2; y += 2) {
+          for (let x = col2X1; x < col2X2; x += 2) {
+            const i = (y * W + x) * 4;
+            const R = data[i], G = data[i+1], B = data[i+2];
+            if (isRed(R, G, B)) red2++;
+            else if (isGreen(R, G, B)) green2++;
+          }
         }
-      });
+        items[rightColumn[r]] = red2 > green2 && red2 > 5;
+      }
       
       scanText.textContent = '✅ Готово!';
       saveState();
@@ -340,43 +225,60 @@
     img.src = photoData;
   }
 
-  function clusterMagnets(magnets, minDist) {
-    const clusters = [];
-    const used = new Set();
+  // Найти доску по самому большому светлому прямоугольнику
+  function findBoard(data, W, H) {
+    // Создаём карту яркости
+    const brightness = new Array(W * H);
+    for (let i = 0; i < data.length; i += 4) {
+      const R = data[i], G = data[i+1], B = data[i+2];
+      brightness[i / 4] = (R + G + B) / 3;
+    }
     
-    for (let i = 0; i < magnets.length; i++) {
-      if (used.has(i)) continue;
-      
-      const cluster = { x: 0, y: 0, count: 0, color: magnets[i].color };
-      const queue = [i];
-      used.add(i);
-      
-      while (queue.length > 0) {
-        const idx = queue.pop();
-        const m = magnets[idx];
-        cluster.x += m.x;
-        cluster.y += m.y;
-        cluster.count++;
-        
-        for (let j = idx + 1; j < magnets.length; j++) {
-          if (used.has(j)) continue;
-          const dx = magnets[j].x - m.x;
-          const dy = magnets[j].y - m.y;
-          if (Math.abs(dx) < minDist && Math.abs(dy) < minDist && magnets[j].color === cluster.color) {
-            used.add(j);
-            queue.push(j);
-          }
+    // Ищем порог: доска должна быть светлее среднего
+    let totalBrightness = 0;
+    for (let i = 0; i < brightness.length; i++) totalBrightness += brightness[i];
+    const avgBrightness = totalBrightness / brightness.length;
+    const threshold = avgBrightness + 20; // доска светлее среднего на 20
+    
+    // Находим границы светлой области
+    let top = H, bottom = 0, left = W, right = 0;
+    let lightPixels = 0;
+    
+    for (let y = 0; y < H; y += 2) {
+      for (let x = 0; x < W; x += 2) {
+        if (brightness[y * W + x] > threshold) {
+          lightPixels++;
+          if (y < top) top = y;
+          if (y > bottom) bottom = y;
+          if (x < left) left = x;
+          if (x > right) right = x;
         }
-      }
-      
-      if (cluster.count >= 3) {
-        cluster.x /= cluster.count;
-        cluster.y /= cluster.count;
-        clusters.push(cluster);
       }
     }
     
-    return clusters;
+    // Проверяем что нашли достаточно светлых пикселей
+    if (lightPixels < 3000) return null;
+    
+    // Проверяем что область похожа на доску (прямоугольник)
+    const area = (bottom - top) * (right - left);
+    if (area < W * H * 0.1) return null; // меньше 10% экрана
+    
+    // Добавляем небольшие отступы
+    const padding = 10;
+    return {
+      top: Math.max(0, top - padding),
+      bottom: Math.min(H, bottom + padding),
+      left: Math.max(0, left - padding),
+      right: Math.min(W, right + padding)
+    };
+  }
+
+  function isRed(R, G, B) {
+    return R > 130 && G < 120 && B < 120 && R > G + 20 && R > B + 20;
+  }
+
+  function isGreen(R, G, B) {
+    return G > 110 && G > R - 10 && G > B + 20;
   }
 
   function toggleItem(name) {

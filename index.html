@@ -36,7 +36,6 @@
   }
 
   .btn-photo { background: #2196F3; color: white; }
-  .btn-scan { background: #4CAF50; color: white; }
   .btn-reset { background: #757575; color: white; }
   .btn:active { transform: scale(0.95); }
 
@@ -46,7 +45,6 @@
     overflow: hidden;
     display: none;
     box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    position: relative;
   }
 
   .photo-box img {
@@ -54,18 +52,6 @@
     display: block;
     max-height: 300px;
     object-fit: cover;
-  }
-
-  .scan-status {
-    position: absolute;
-    top: 10px;
-    left: 10px;
-    background: rgba(0,0,0,0.7);
-    color: white;
-    padding: 8px 12px;
-    border-radius: 8px;
-    font-size: 13px;
-    display: none;
   }
 
   .stats {
@@ -155,14 +141,12 @@
   <h1>🛒 Список покупок</h1>
   <div class="btn-row">
     <button class="btn btn-photo" onclick="document.getElementById('cameraInput').click()">📷 Сфоткать</button>
-    <button class="btn btn-scan" onclick="autoScan()"> Сканировать</button>
-    <button class="btn btn-reset" onclick="resetAll()"> Сброс</button>
+    <button class="btn btn-reset" onclick="resetAll()">🔄 Сброс</button>
   </div>
 </div>
 
 <div class="photo-box" id="photoBox">
   <img id="photoImg" src="" alt="Фото">
-  <div class="scan-status" id="scanStatus">Сканирую...</div>
 </div>
 
 <div class="stats">
@@ -182,36 +166,31 @@
 </div>
 
 <div class="section">
-  <div class="section-title"> Овощи и мясо</div>
+  <div class="section-title"> Левый столбец</div>
   <div class="product-list" id="list1"></div>
 </div>
 
 <div class="section">
-  <div class="section-title"> Молочные продукты</div>
+  <div class="section-title">📋 Правый столбец</div>
   <div class="product-list" id="list2"></div>
-</div>
-
-<div class="section">
-  <div class="section-title">🍎 Фрукты и другое</div>
-  <div class="product-list" id="list3"></div>
 </div>
 
 <input type="file" id="cameraInput" accept="image/*" capture="environment" onchange="handlePhoto(event)">
 
 <script>
-  const categories = {
-    list1: ["Хлеб", "Картофель", "Лук", "Морковь", "Курица", "Мясо", "Фарш", "Рыба", "Помидоры", "Огурцы", "Капуста", "Чеснок"],
-    list2: ["Молоко", "Яйца", "Сыр", "Сметана", "Кефир", "Творог", "Йогурт", "Колбаса", "Сосиски", "Сливки", "Масло", "Майонез"],
-    list3: ["Яблоки", "Бананы", "Макароны", "Рис", "Гречка", "Каша", "Мука", "Сахар", "Соль", "Чай", "Кофе", "Вода", "Сок", "Печенье", "Шоколад", "Кетчуп", "Авокадо", "Пельмени", "Лимон", "Виноград"]
-  };
-
+  // Точный порядок как на доске
+  const leftColumn = ["Хлеб", "Молоко", "Яйца", "Картофель", "Лук", "Морковь", "Курица", "Сыр", "Мясо", "Сметана", "Кефир", "Творог", "Йогурт", "Колбаса", "Сосиски", "Фарш", "Рыба", "Помидоры", "Огурцы", "Капуста", "Сливки", "Чеснок"];
+  const rightColumn = ["Яблоки", "Бананы", "Макароны", "Рис", "Гречка", "Каша", "Мука", "Сахар", "Соль", "Масло", "Чай", "Кофе", "Вода", "Сок", "Печенье", "Шоколад", "Майонез", "Кетчуп", "Авокадо", "Пельмени", "Лимон", "Виноград"];
+  
   let items = {};
   let photoData = null;
 
   function loadState() {
     const saved = localStorage.getItem('shoppingItems');
     if (saved) items = JSON.parse(saved);
-    else Object.values(categories).flat().forEach(p => items[p] = false);
+    else {
+      [...leftColumn, ...rightColumn].forEach(p => items[p] = false);
+    }
     
     const savedPhoto = localStorage.getItem('shoppingPhoto');
     if (savedPhoto) {
@@ -236,28 +215,23 @@
       document.getElementById('photoImg').src = photoData;
       document.getElementById('photoBox').style.display = 'block';
       saveState();
-      setTimeout(autoScan, 500);
+      
+      // Автоматически сканируем после фото
+      setTimeout(scanBoard, 300);
     };
     reader.readAsDataURL(file);
     e.target.value = '';
   }
 
-  function autoScan() {
-    if (!photoData) {
-      alert('Сначала сфотографируй доску!');
-      return;
-    }
-
-    const status = document.getElementById('scanStatus');
-    status.style.display = 'block';
-    status.textContent = '🔍 Сканирую...';
+  function scanBoard() {
+    if (!photoData) return;
 
     const img = new Image();
     img.onload = function() {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       
-      const W = 800;
+      const W = 400;
       const H = (img.height / img.width) * W;
       canvas.width = W;
       canvas.height = H;
@@ -266,82 +240,60 @@
       const imageData = ctx.getImageData(0, 0, W, H);
       const data = imageData.data;
       
-      const allProducts = [
-        ...categories.list1,
-        ...categories.list2,
-        ...categories.list3
-      ];
-      
-      // Сетка: 22 строки, 2 колонки
       const rows = 22;
       const rowH = H / rows;
       
-      // Зоны для магнитов (правая часть каждой ячейки)
-      // Левый столбец: 40-55% ширины
-      // Правый столбец: 85-98% ширины
+      // Сканируем левую колонку (магниты на 70-85% ширины)
+      for (let r = 0; r < rows; r++) {
+        const y1 = Math.floor(r * rowH + rowH * 0.3);
+        const y2 = Math.floor((r + 1) * rowH - rowH * 0.3);
+        const x1 = Math.floor(W * 0.70);
+        const x2 = Math.floor(W * 0.85);
+        
+        let redCount = 0;
+        let greenCount = 0;
+        
+        for (let y = y1; y < y2; y += 2) {
+          for (let x = x1; x < x2; x += 2) {
+            const i = (y * W + x) * 4;
+            const R = data[i], G = data[i+1], B = data[i+2];
+            
+            if (R > 150 && G < 100 && B < 100) redCount++;
+            else if (G > 130 && R < 180 && B < 110) greenCount++;
+          }
+        }
+        
+        // Если красного больше - значит не куплено
+        items[leftColumn[r]] = redCount > greenCount;
+      }
       
-      for (let row = 0; row < rows; row++) {
-        const y1 = Math.floor(row * rowH + rowH * 0.3);
-        const y2 = Math.floor((row + 1) * rowH - rowH * 0.3);
+      // Сканируем правую колонку (магниты на 70-85% ширины)
+      for (let r = 0; r < rows; r++) {
+        const y1 = Math.floor(r * rowH + rowH * 0.3);
+        const y2 = Math.floor((r + 1) * rowH - rowH * 0.3);
+        const x1 = Math.floor(W * 0.70);
+        const x2 = Math.floor(W * 0.85);
         
-        // Проверяем левый столбец (индексы 0-21)
-        if (row < 22) {
-          const x1 = Math.floor(W * 0.40);
-          const x2 = Math.floor(W * 0.55);
-          const result = checkZone(data, W, x1, x2, y1, y2);
-          
-          if (result.red > result.green && result.red > 10) {
-            items[allProducts[row]] = false; // Красный
-          } else {
-            items[allProducts[row]] = true; // Зелёный
+        let redCount = 0;
+        let greenCount = 0;
+        
+        for (let y = y1; y < y2; y += 2) {
+          for (let x = x1; x < x2; x += 2) {
+            const i = (y * W + x) * 4;
+            const R = data[i], G = data[i+1], B = data[i+2];
+            
+            if (R > 150 && G < 100 && B < 100) redCount++;
+            else if (G > 130 && R < 180 && B < 110) greenCount++;
           }
         }
         
-        // Проверяем правый столбец (индексы 22-43)
-        if (row < 22) {
-          const x1 = Math.floor(W * 0.85);
-          const x2 = Math.floor(W * 0.98);
-          const result = checkZone(data, W, x1, x2, y1, y2);
-          
-          if (result.red > result.green && result.red > 10) {
-            items[allProducts[22 + row]] = false; // Красный
-          } else {
-            items[allProducts[22 + row]] = true; // Зелёный
-          }
-        }
+        items[rightColumn[r]] = redCount > greenCount;
       }
       
       saveState();
       renderAll();
-      status.textContent = '✅ Готово!';
-      setTimeout(() => status.style.display = 'none', 2000);
     };
     img.src = photoData;
-  }
-
-  function checkZone(data, W, x1, x2, y1, y2) {
-    let red = 0;
-    let green = 0;
-    
-    for (let y = y1; y < y2; y += 2) {
-      for (let x = x1; x < x2; x += 2) {
-        const i = (y * W + x) * 4;
-        const R = data[i];
-        const G = data[i + 1];
-        const B = data[i + 2];
-        
-        // Красный фон свитча
-        if (R > 150 && G < 100 && B < 100) {
-          red++;
-        }
-        // Зелёный фон свитча
-        else if (G > 130 && R < 180 && B < 110) {
-          green++;
-        }
-      }
-    }
-    
-    return { red, green };
   }
 
   function toggleItem(name) {
@@ -352,7 +304,7 @@
 
   function resetAll() {
     if (confirm('Сбросить всё на красное?')) {
-      Object.values(categories).flat().forEach(p => items[p] = false);
+      [...leftColumn, ...rightColumn].forEach(p => items[p] = false);
       saveState();
       renderAll();
     }
@@ -363,29 +315,28 @@
     container.innerHTML = '';
     
     products.forEach(name => {
-      const isOk = items[name] === true;
+      const isNeed = items[name] === true; // true = нужно купить (красное)
       const div = document.createElement('div');
-      div.className = 'product ' + (isOk ? 'ok' : 'need');
+      div.className = 'product ' + (isNeed ? 'need' : 'ok');
       div.onclick = () => toggleItem(name);
-      div.innerHTML = `<span class="name">${name}</span><span class="dot">${isOk ? '✓' : '✗'}</span>`;
+      div.innerHTML = `<span class="name">${name}</span><span class="dot">${isNeed ? '✗' : '✓'}</span>`;
       container.appendChild(div);
     });
   }
 
   function renderAll() {
-    renderList('list1', categories.list1);
-    renderList('list2', categories.list2);
-    renderList('list3', categories.list3);
+    renderList('list1', leftColumn);
+    renderList('list2', rightColumn);
 
-    const allProducts = Object.values(categories).flat();
-    const okCount = allProducts.filter(p => items[p] === true).length;
-    const needCount = allProducts.length - okCount;
+    const allProducts = [...leftColumn, ...rightColumn];
+    const needCount = allProducts.filter(p => items[p] === true).length;
+    const okCount = allProducts.length - needCount;
 
-    document.getElementById('okCount').textContent = okCount;
     document.getElementById('needCount').textContent = needCount;
+    document.getElementById('okCount').textContent = okCount;
 
     const successMsg = document.getElementById('successMsg');
-    if (okCount === allProducts.length && allProducts.length > 0) {
+    if (needCount === 0 && allProducts.length > 0) {
       successMsg.style.display = 'block';
     } else {
       successMsg.style.display = 'none';

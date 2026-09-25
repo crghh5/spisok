@@ -14,6 +14,7 @@
   .btn { flex: 1; padding: 14px; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; }
   .btn-photo { background: #2196F3; color: white; }
   .btn-reset { background: #757575; color: white; }
+  .btn-calib { background: #FF9800; color: white; }
   .btn:active { transform: scale(0.95); }
 
   .photo-box { margin: 15px; border-radius: 12px; overflow: hidden; display: none; box-shadow: 0 2px 10px rgba(0,0,0,0.1); position: relative; background: white; }
@@ -23,6 +24,9 @@
   .spinner { width: 40px; height: 40px; border: 4px solid rgba(255,255,255,0.3); border-top: 4px solid #4CAF50; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 10px; }
   @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
+  .calib-info { background: #FFF3E0; margin: 0 15px 15px; padding: 12px; border-radius: 10px; font-size: 13px; color: #E65100; display: none; }
+  .calib-info.active { display: block; }
+
   .stats { background: white; margin: 0 15px 15px; padding: 15px; border-radius: 12px; display: flex; justify-content: space-around; }
   .stat-num { font-size: 28px; font-weight: 700; }
   .stat-label { font-size: 12px; color: #888; margin-top: 4px; }
@@ -30,7 +34,8 @@
   .stat-num.green { color: #43a047; }
 
   .section { margin: 15px; }
-  .section-title { font-size: 18px; font-weight: 700; margin-bottom: 10px; color: #555; }
+  .section-title { font-size: 18px; font-weight: 700; margin-bottom: 10px; color: #555; display: flex; align-items: center; gap: 8px; }
+  .section-title .badge { background: #e53935; color: white; padding: 2px 8px; border-radius: 10px; font-size: 12px; }
   .product-list { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
   .product { background: white; border-radius: 12px; padding: 16px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; border-left: 5px solid transparent; box-shadow: 0 2px 6px rgba(0,0,0,0.05); transition: all 0.2s; }
@@ -49,6 +54,24 @@
   .success .text { font-size: 24px; font-weight: 700; }
   @keyframes popIn { 0% { transform: scale(0.5); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
 
+  /* Модальное окно калибровки */
+  .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
+  .modal-overlay.active { display: flex; }
+  .modal { background: white; border-radius: 16px; max-width: 400px; width: 100%; max-height: 80vh; display: flex; flex-direction: column; overflow: hidden; }
+  .modal-header { padding: 20px; border-bottom: 1px solid #eee; }
+  .modal-header h3 { font-size: 20px; margin-bottom: 8px; }
+  .modal-header p { font-size: 13px; color: #666; }
+  .modal-list { overflow-y: auto; flex: 1; padding: 10px 20px; }
+  .modal-item { display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid #f0f0f0; cursor: pointer; }
+  .modal-item:last-child { border-bottom: none; }
+  .modal-item .check { width: 24px; height: 24px; border: 2px solid #ccc; border-radius: 6px; margin-right: 12px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; flex-shrink: 0; }
+  .modal-item.selected .check { background: #e53935; border-color: #e53935; color: white; }
+  .modal-item.selected .m-name { color: #c62828; font-weight: 600; }
+  .modal-item .m-name { font-size: 15px; flex: 1; }
+  .modal-footer { padding: 15px 20px; border-top: 1px solid #eee; display: flex; gap: 10px; }
+  .modal-footer .btn { flex: 1; }
+  .btn-cancel { background: #eee; color: #333; }
+
   #cameraInput { display: none; }
 </style>
 </head>
@@ -58,8 +81,13 @@
   <h1>🛒 Список покупок</h1>
   <div class="btn-row">
     <button class="btn btn-photo" onclick="document.getElementById('cameraInput').click()">📷 Сфоткать</button>
+    <button class="btn btn-calib" onclick="openCalibration()">⚙️ Калибровка</button>
     <button class="btn btn-reset" onclick="resetAll()">🔄 Сброс</button>
   </div>
+</div>
+
+<div class="calib-info" id="calibInfo">
+  ⚙️ Калибровка активна. Красные флажки определяются точнее.
 </div>
 
 <div class="photo-box" id="photoBox">
@@ -80,14 +108,29 @@
   <div class="text">Ты всё купил!</div>
 </div>
 
-<div class="section">
-  <div class="section-title">Левый столбец</div>
-  <div class="product-list" id="list1"></div>
+<div class="section" id="needSection">
+  <div class="section-title">🔴 Нужно купить <span class="badge" id="needBadge">0</span></div>
+  <div class="product-list" id="needList"></div>
 </div>
 
-<div class="section">
-  <div class="section-title">Правый столбец</div>
-  <div class="product-list" id="list2"></div>
+<div class="section" id="okSection">
+  <div class="section-title">✅ Куплено <span class="badge" id="okBadge" style="background:#43a047">0</span></div>
+  <div class="product-list" id="okList"></div>
+</div>
+
+<!-- Модальное окно калибровки -->
+<div class="modal-overlay" id="calibModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>⚙️ Калибровка</h3>
+      <p>Отметь товары, у которых сейчас КРАСНЫЙ флажок. Приложение запомнит как он выглядит.</p>
+    </div>
+    <div class="modal-list" id="calibList"></div>
+    <div class="modal-footer">
+      <button class="btn btn-cancel" onclick="closeCalibration()">Отмена</button>
+      <button class="btn btn-calib" onclick="saveCalibration()">Сохранить</button>
+    </div>
+  </div>
 </div>
 
 <input type="file" id="cameraInput" accept="image/*" capture="environment" onchange="handlePhoto(event)">
@@ -95,14 +138,16 @@
 <script>
   const leftColumn = ["Хлеб", "Молоко", "Яйца", "Картофель", "Лук", "Морковь", "Курица", "Сыр", "Мясо", "Сметана", "Кефир", "Творог", "Йогурт", "Колбаса", "Сосиски", "Фарш", "Рыба", "Помидоры", "Огурцы", "Капуста", "Сливки", "Чеснок"];
   const rightColumn = ["Яблоки", "Бананы", "Макароны", "Рис", "Гречка", "Каша", "Мука", "Сахар", "Соль", "Масло", "Чай", "Кофе", "Вода", "Сок", "Печенье", "Шоколад", "Майонез", "Кетчуп", "Авокадо", "Пельмени", "Лимон", "Виноград"];
+  const allProducts = [...leftColumn, ...rightColumn];
   
   let items = {};
   let photoData = null;
+  let calibRedColor = null; // Эталонный красный цвет {R, G, B}
 
   function loadState() {
     const saved = localStorage.getItem('shoppingItems');
     if (saved) items = JSON.parse(saved);
-    else [...leftColumn, ...rightColumn].forEach(p => items[p] = false);
+    else allProducts.forEach(p => items[p] = false);
     
     const savedPhoto = localStorage.getItem('shoppingPhoto');
     if (savedPhoto) {
@@ -110,11 +155,133 @@
       document.getElementById('photoImg').src = photoData;
       document.getElementById('photoBox').style.display = 'block';
     }
+    
+    const savedCalib = localStorage.getItem('calibRedColor');
+    if (savedCalib) {
+      calibRedColor = JSON.parse(savedCalib);
+      document.getElementById('calibInfo').classList.add('active');
+    }
   }
 
   function saveState() {
     localStorage.setItem('shoppingItems', JSON.stringify(items));
     if (photoData) localStorage.setItem('shoppingPhoto', photoData);
+  }
+
+  // ===== КАЛИБРОВКА =====
+  let calibSelection = {};
+
+  function openCalibration() {
+    if (!photoData) {
+      alert('Сначала сфотографируй доску!');
+      return;
+    }
+    
+    calibSelection = {};
+    allProducts.forEach(p => calibSelection[p] = items[p] === true);
+    
+    const list = document.getElementById('calibList');
+    list.innerHTML = '';
+    
+    allProducts.forEach(name => {
+      const div = document.createElement('div');
+      div.className = 'modal-item' + (calibSelection[name] ? ' selected' : '');
+      div.onclick = () => {
+        calibSelection[name] = !calibSelection[name];
+        div.classList.toggle('selected');
+        div.querySelector('.check').innerHTML = calibSelection[name] ? '✓' : '';
+      };
+      div.innerHTML = `<div class="check">${calibSelection[name] ? '✓' : ''}</div><span class="m-name">${name}</span>`;
+      list.appendChild(div);
+    });
+    
+    document.getElementById('calibModal').classList.add('active');
+  }
+
+  function closeCalibration() {
+    document.getElementById('calibModal').classList.remove('active');
+  }
+
+  function saveCalibration() {
+    // Применяем выбор
+    allProducts.forEach(p => items[p] = calibSelection[p]);
+    
+    // Анализируем фото и находим эталонный красный цвет
+    const img = new Image();
+    img.onload = function() {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const maxW = 800;
+      const scale = Math.min(1, maxW / img.width);
+      const W = Math.floor(img.width * scale);
+      const H = Math.floor(img.height * scale);
+      canvas.width = W;
+      canvas.height = H;
+      ctx.drawImage(img, 0, 0, W, H);
+      
+      const imageData = ctx.getImageData(0, 0, W, H);
+      const data = imageData.data;
+      
+      // Находим позиции красных флажков по сетке
+      const board = findBoard(data, W, H);
+      if (!board) {
+        alert('Доска не найдена. Попробуй сфотографировать ближе.');
+        return;
+      }
+      
+      const { top, bottom, left, right } = board;
+      const boardW = right - left;
+      const boardH = bottom - top;
+      const rows = 22;
+      const rowH = boardH / rows;
+      
+      // Собираем красные пиксели из зон отмеченных товаров
+      let redR = 0, redG = 0, redB = 0, redCount = 0;
+      
+      allProducts.forEach((name, idx) => {
+        if (!calibSelection[name]) return; // Пропускаем зелёные
+        
+        const col = idx < 22 ? 0 : 1;
+        const row = idx % 22;
+        
+        const y1 = Math.floor(top + row * rowH + rowH * 0.3);
+        const y2 = Math.floor(top + (row + 1) * rowH - rowH * 0.3);
+        
+        const colStart = col === 0 ? left + boardW * 0.35 : left + boardW * 0.85;
+        const colEnd = col === 0 ? left + boardW * 0.48 : left + boardW * 0.98;
+        
+        for (let y = y1; y < y2; y += 2) {
+          for (let x = Math.floor(colStart); x < Math.floor(colEnd); x += 2) {
+            const i = (y * W + x) * 4;
+            const R = data[i], G = data[i+1], B = data[i+2];
+            
+            // Собираем только красные пиксели
+            if (R > 130 && G < 120 && B < 120 && R > G + 20) {
+              redR += R;
+              redG += G;
+              redB += B;
+              redCount++;
+            }
+          }
+        }
+      });
+      
+      if (redCount > 0) {
+        calibRedColor = {
+          R: Math.round(redR / redCount),
+          G: Math.round(redG / redCount),
+          B: Math.round(redB / redCount)
+        };
+        localStorage.setItem('calibRedColor', JSON.stringify(calibRedColor));
+        document.getElementById('calibInfo').classList.add('active');
+      }
+      
+      saveState();
+      renderAll();
+      closeCalibration();
+      alert('✅ Калибровка сохранена! Теперь сканер будет точнее находить красные флажки.');
+    };
+    img.src = photoData;
   }
 
   function handlePhoto(e) {
@@ -146,13 +313,10 @@
     img.onload = function() {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
-      
-      // Сохраняем пропорции, не обрезаем
       const maxW = 800;
       const scale = Math.min(1, maxW / img.width);
       const W = Math.floor(img.width * scale);
       const H = Math.floor(img.height * scale);
-      
       canvas.width = W;
       canvas.height = H;
       ctx.drawImage(img, 0, 0, W, H);
@@ -162,120 +326,114 @@
       
       const scanText = document.getElementById('scanText');
       
-      // ШАГ 1: Найти все флажки (красные и зелёные пятна)
-      scanText.textContent = 'Нахожу флажки...';
+      // Находим доску
+      scanText.textContent = 'Нахожу доску...';
+      const board = findBoard(data, W, H);
       
-      const redPixels = [];
-      const greenPixels = [];
+      if (!board) {
+        scanText.textContent = 'Доска не найдена';
+        setTimeout(() => document.getElementById('scanOverlay').style.display = 'none', 2000);
+        return;
+      }
       
-      for (let y = 0; y < H; y += 2) {
-        for (let x = 0; x < W; x += 2) {
-          const i = (y * W + x) * 4;
-          const R = data[i], G = data[i+1], B = data[i+2];
+      const { top, bottom, left, right } = board;
+      const boardW = right - left;
+      const boardH = bottom - top;
+      const rows = 22;
+      const rowH = boardH / rows;
+      
+      scanText.textContent = 'Сканирую флажки...';
+      
+      // Сбросить всё
+      allProducts.forEach(p => items[p] = false);
+      
+      // Сканируем каждую ячейку
+      for (let r = 0; r < rows; r++) {
+        const y1 = Math.floor(top + r * rowH + rowH * 0.25);
+        const y2 = Math.floor(top + (r + 1) * rowH - rowH * 0.25);
+        
+        for (let col = 0; col < 2; col++) {
+          const idx = col * 22 + r;
+          const name = allProducts[idx];
           
-          // Яркий красный (фон флажка)
-          if (R > 150 && G < 100 && B < 100 && R - G > 40) {
-            redPixels.push({x, y});
+          const colStart = col === 0 ? left + boardW * 0.35 : left + boardW * 0.85;
+          const colEnd = col === 0 ? left + boardW * 0.48 : left + boardW * 0.98;
+          
+          let redScore = 0;
+          let greenScore = 0;
+          
+          for (let y = y1; y < y2; y += 2) {
+            for (let x = Math.floor(colStart); x < Math.floor(colEnd); x += 2) {
+              const i = (y * W + x) * 4;
+              const R = data[i], G = data[i+1], B = data[i+2];
+              
+              // Если есть калибровка - используем её
+              if (calibRedColor) {
+                const dist = Math.sqrt(
+                  Math.pow(R - calibRedColor.R, 2) +
+                  Math.pow(G - calibRedColor.G, 2) +
+                  Math.pow(B - calibRedColor.B, 2)
+                );
+                if (dist < 60) redScore++;
+              } else {
+                if (R > 140 && G < 110 && B < 110 && R > G + 30) redScore++;
+              }
+              
+              if (G > 120 && G > R - 10 && G > B + 20) greenScore++;
+            }
           }
-          // Яркий зелёный (фон флажка)
-          else if (G > 130 && R < 160 && B < 110 && G - B > 30) {
-            greenPixels.push({x, y});
-          }
+          
+          items[name] = redScore > greenScore && redScore > 3;
         }
       }
       
-      scanText.textContent = `Найдено: ${redPixels.length} красных, ${greenPixels.length} зелёных`;
-      
-      // ШАГ 2: Сгруппировать в кластеры (каждый кластер = один флажок)
-      const redClusters = clusterPixels(redPixels, 20);
-      const greenClusters = clusterPixels(greenPixels, 20);
-      
-      scanText.textContent = `Кластеры: ${redClusters.length} красных, ${greenClusters.length} зелёных`;
-      
-      // ШАГ 3: Объединить все флажки и разделить на колонки
-      const allFlags = [
-        ...redClusters.map(c => ({...c, color: 'red'})),
-        ...greenClusters.map(c => ({...c, color: 'green'}))
-      ];
-      
-      // Разделить на левую и правую колонки по центру
-      const centerX = W / 2;
-      const leftFlags = allFlags.filter(f => f.x < centerX);
-      const rightFlags = allFlags.filter(f => f.x >= centerX);
-      
-      // Сортировать по Y (сверху вниз)
-      leftFlags.sort((a, b) => a.y - b.y);
-      rightFlags.sort((a, b) => a.y - b.y);
-      
-      // ШАГ 4: Назначить продукты
-      scanText.textContent = 'Распределяю...';
-      
-      // Сбросить всё на зелёное (куплено)
-      [...leftColumn, ...rightColumn].forEach(p => items[p] = false);
-      
-      // Отметить красные флажки
-      leftFlags.forEach((flag, idx) => {
-        if (idx < leftColumn.length && flag.color === 'red') {
-          items[leftColumn[idx]] = true;
-        }
-      });
-      
-      rightFlags.forEach((flag, idx) => {
-        if (idx < rightColumn.length && flag.color === 'red') {
-          items[rightColumn[idx]] = true;
-        }
-      });
-      
-      scanText.textContent = `✅ Найдено ${leftFlags.length + rightFlags.length} флажков!`;
+      scanText.textContent = '✅ Готово!';
       saveState();
       renderAll();
-      setTimeout(() => document.getElementById('scanOverlay').style.display = 'none', 2000);
+      setTimeout(() => document.getElementById('scanOverlay').style.display = 'none', 1500);
     };
     img.src = photoData;
   }
 
-  // Группировка пикселей в кластеры
-  function clusterPixels(pixels, minDist) {
-    if (pixels.length === 0) return [];
+  function findBoard(data, W, H) {
+    const brightness = new Array(W * H);
+    for (let i = 0; i < data.length; i += 4) {
+      const R = data[i], G = data[i+1], B = data[i+2];
+      brightness[i / 4] = (R + G + B) / 3;
+    }
     
-    const clusters = [];
-    const used = new Set();
+    let totalBrightness = 0;
+    for (let i = 0; i < brightness.length; i++) totalBrightness += brightness[i];
+    const avgBrightness = totalBrightness / brightness.length;
+    const threshold = avgBrightness + 15;
     
-    for (let i = 0; i < pixels.length; i++) {
-      if (used.has(i)) continue;
-      
-      const cluster = { x: 0, y: 0, count: 0 };
-      const queue = [i];
-      used.add(i);
-      
-      while (queue.length > 0) {
-        const idx = queue.pop();
-        const p = pixels[idx];
-        cluster.x += p.x;
-        cluster.y += p.y;
-        cluster.count++;
-        
-        // Ищем соседей
-        for (let j = i + 1; j < pixels.length; j++) {
-          if (used.has(j)) continue;
-          const dx = pixels[j].x - p.x;
-          const dy = pixels[j].y - p.y;
-          if (Math.abs(dx) < minDist && Math.abs(dy) < minDist) {
-            used.add(j);
-            queue.push(j);
-          }
+    let top = H, bottom = 0, left = W, right = 0;
+    let lightPixels = 0;
+    
+    for (let y = 0; y < H; y += 3) {
+      for (let x = 0; x < W; x += 3) {
+        if (brightness[y * W + x] > threshold) {
+          lightPixels++;
+          if (y < top) top = y;
+          if (y > bottom) bottom = y;
+          if (x < left) left = x;
+          if (x > right) right = x;
         }
-      }
-      
-      // Фильтруем маленькие кластеры (шум)
-      if (cluster.count >= 5) {
-        cluster.x /= cluster.count;
-        cluster.y /= cluster.count;
-        clusters.push(cluster);
       }
     }
     
-    return clusters;
+    if (lightPixels < 3000) return null;
+    
+    const area = (bottom - top) * (right - left);
+    if (area < W * H * 0.1) return null;
+    
+    const padding = 15;
+    return {
+      top: Math.max(0, top - padding),
+      bottom: Math.min(H, bottom + padding),
+      left: Math.max(0, left - padding),
+      right: Math.min(W, right + padding)
+    };
   }
 
   function toggleItem(name) {
@@ -285,38 +443,43 @@
   }
 
   function resetAll() {
-    if (confirm('Сбросить всё на красное?')) {
-      [...leftColumn, ...rightColumn].forEach(p => items[p] = true);
+    if (confirm('Сбросить всё на красное (нужно купить)?')) {
+      allProducts.forEach(p => items[p] = true);
       saveState();
       renderAll();
     }
   }
 
-  function renderList(containerId, products) {
-    const container = document.getElementById(containerId);
-    container.innerHTML = '';
+  function renderAll() {
+    const needList = document.getElementById('needList');
+    const okList = document.getElementById('okList');
+    needList.innerHTML = '';
+    okList.innerHTML = '';
     
-    products.forEach(name => {
+    let needCount = 0;
+    let okCount = 0;
+    
+    allProducts.forEach(name => {
       const isNeed = items[name] === true;
       const div = document.createElement('div');
       div.className = 'product ' + (isNeed ? 'need' : 'ok');
       div.onclick = () => toggleItem(name);
       div.innerHTML = `<span class="name">${name}</span><span class="dot">${isNeed ? '' : '✓'}</span>`;
-      container.appendChild(div);
+      
+      if (isNeed) {
+        needList.appendChild(div);
+        needCount++;
+      } else {
+        okList.appendChild(div);
+        okCount++;
+      }
     });
-  }
-
-  function renderAll() {
-    renderList('list1', leftColumn);
-    renderList('list2', rightColumn);
-
-    const allProducts = [...leftColumn, ...rightColumn];
-    const needCount = allProducts.filter(p => items[p] === true).length;
-    const okCount = allProducts.length - needCount;
-
+    
     document.getElementById('needCount').textContent = needCount;
     document.getElementById('okCount').textContent = okCount;
-
+    document.getElementById('needBadge').textContent = needCount;
+    document.getElementById('okBadge').textContent = okCount;
+    
     const successMsg = document.getElementById('successMsg');
     if (needCount === 0 && allProducts.length > 0) {
       successMsg.style.display = 'block';

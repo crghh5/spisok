@@ -16,8 +16,8 @@
   .btn-reset { background: #757575; color: white; }
   .btn:active { transform: scale(0.95); }
 
-  .photo-box { margin: 15px; border-radius: 12px; overflow: hidden; display: none; box-shadow: 0 2px 10px rgba(0,0,0,0.1); position: relative; }
-  .photo-box img { width: 100%; display: block; max-height: 300px; object-fit: cover; }
+  .photo-box { margin: 15px; border-radius: 12px; overflow: hidden; display: none; box-shadow: 0 2px 10px rgba(0,0,0,0.1); position: relative; background: white; }
+  .photo-box img { width: 100%; display: block; max-height: 400px; object-fit: contain; }
 
   .scan-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; flex-direction: column; color: white; font-size: 16px; font-weight: 600; }
   .spinner { width: 40px; height: 40px; border: 4px solid rgba(255,255,255,0.3); border-top: 4px solid #4CAF50; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 10px; }
@@ -66,7 +66,7 @@
   <img id="photoImg" src="" alt="Фото">
   <div class="scan-overlay" id="scanOverlay">
     <div class="spinner"></div>
-    <div id="scanText">Ищу доску...</div>
+    <div id="scanText">Ищу флажки...</div>
   </div>
 </div>
 
@@ -131,15 +131,15 @@
       const overlay = document.getElementById('scanOverlay');
       const scanText = document.getElementById('scanText');
       overlay.style.display = 'flex';
-      scanText.textContent = 'Ищу доску...';
+      scanText.textContent = 'Ищу флажки...';
       
-      setTimeout(() => scanBoard(), 500);
+      setTimeout(() => scanFlags(), 500);
     };
     reader.readAsDataURL(file);
     e.target.value = '';
   }
 
-  function scanBoard() {
+  function scanFlags() {
     if (!photoData) return;
 
     const img = new Image();
@@ -147,9 +147,12 @@
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       
-      // Рабочее разрешение
-      const W = 500;
-      const H = (img.height / img.width) * W;
+      // Сохраняем пропорции, не обрезаем
+      const maxW = 800;
+      const scale = Math.min(1, maxW / img.width);
+      const W = Math.floor(img.width * scale);
+      const H = Math.floor(img.height * scale);
+      
       canvas.width = W;
       canvas.height = H;
       ctx.drawImage(img, 0, 0, W, H);
@@ -159,126 +162,120 @@
       
       const scanText = document.getElementById('scanText');
       
-      // ШАГ 1: Найти доску (самый большой светлый прямоугольник)
-      scanText.textContent = 'Нахожу доску...';
-      const board = findBoard(data, W, H);
+      // ШАГ 1: Найти все флажки (красные и зелёные пятна)
+      scanText.textContent = 'Нахожу флажки...';
       
-      if (!board) {
-        scanText.textContent = 'Доска не найдена. Тапни вручную.';
-        setTimeout(() => document.getElementById('scanOverlay').style.display = 'none', 3000);
-        return;
+      const redPixels = [];
+      const greenPixels = [];
+      
+      for (let y = 0; y < H; y += 2) {
+        for (let x = 0; x < W; x += 2) {
+          const i = (y * W + x) * 4;
+          const R = data[i], G = data[i+1], B = data[i+2];
+          
+          // Яркий красный (фон флажка)
+          if (R > 150 && G < 100 && B < 100 && R - G > 40) {
+            redPixels.push({x, y});
+          }
+          // Яркий зелёный (фон флажка)
+          else if (G > 130 && R < 160 && B < 110 && G - B > 30) {
+            greenPixels.push({x, y});
+          }
+        }
       }
       
-      // ШАГ 2: Сканировать магниты по сетке
-      scanText.textContent = 'Сканирую магниты...';
+      scanText.textContent = `Найдено: ${redPixels.length} красных, ${greenPixels.length} зелёных`;
       
-      const { top, bottom, left, right } = board;
-      const boardW = right - left;
-      const boardH = bottom - top;
-      const rows = 22;
-      const rowH = boardH / rows;
+      // ШАГ 2: Сгруппировать в кластеры (каждый кластер = один флажок)
+      const redClusters = clusterPixels(redPixels, 20);
+      const greenClusters = clusterPixels(greenPixels, 20);
       
-      // Сбросить всё
+      scanText.textContent = `Кластеры: ${redClusters.length} красных, ${greenClusters.length} зелёных`;
+      
+      // ШАГ 3: Объединить все флажки и разделить на колонки
+      const allFlags = [
+        ...redClusters.map(c => ({...c, color: 'red'})),
+        ...greenClusters.map(c => ({...c, color: 'green'}))
+      ];
+      
+      // Разделить на левую и правую колонки по центру
+      const centerX = W / 2;
+      const leftFlags = allFlags.filter(f => f.x < centerX);
+      const rightFlags = allFlags.filter(f => f.x >= centerX);
+      
+      // Сортировать по Y (сверху вниз)
+      leftFlags.sort((a, b) => a.y - b.y);
+      rightFlags.sort((a, b) => a.y - b.y);
+      
+      // ШАГ 4: Назначить продукты
+      scanText.textContent = 'Распределяю...';
+      
+      // Сбросить всё на зелёное (куплено)
       [...leftColumn, ...rightColumn].forEach(p => items[p] = false);
       
-      // Сканируем каждую строку
-      for (let r = 0; r < rows; r++) {
-        const y1 = Math.floor(top + r * rowH + rowH * 0.3);
-        const y2 = Math.floor(top + (r + 1) * rowH - rowH * 0.3);
-        
-        // Левая колонка - магнит в правой части ячейки
-        const col1X1 = Math.floor(left + boardW * 0.35);
-        const col1X2 = Math.floor(left + boardW * 0.48);
-        
-        let red1 = 0, green1 = 0;
-        for (let y = y1; y < y2; y += 2) {
-          for (let x = col1X1; x < col1X2; x += 2) {
-            const i = (y * W + x) * 4;
-            const R = data[i], G = data[i+1], B = data[i+2];
-            if (isRed(R, G, B)) red1++;
-            else if (isGreen(R, G, B)) green1++;
-          }
+      // Отметить красные флажки
+      leftFlags.forEach((flag, idx) => {
+        if (idx < leftColumn.length && flag.color === 'red') {
+          items[leftColumn[idx]] = true;
         }
-        items[leftColumn[r]] = red1 > green1 && red1 > 5;
-        
-        // Правая колонка
-        const col2X1 = Math.floor(left + boardW * 0.85);
-        const col2X2 = Math.floor(left + boardW * 0.98);
-        
-        let red2 = 0, green2 = 0;
-        for (let y = y1; y < y2; y += 2) {
-          for (let x = col2X1; x < col2X2; x += 2) {
-            const i = (y * W + x) * 4;
-            const R = data[i], G = data[i+1], B = data[i+2];
-            if (isRed(R, G, B)) red2++;
-            else if (isGreen(R, G, B)) green2++;
-          }
-        }
-        items[rightColumn[r]] = red2 > green2 && red2 > 5;
-      }
+      });
       
-      scanText.textContent = '✅ Готово!';
+      rightFlags.forEach((flag, idx) => {
+        if (idx < rightColumn.length && flag.color === 'red') {
+          items[rightColumn[idx]] = true;
+        }
+      });
+      
+      scanText.textContent = `✅ Найдено ${leftFlags.length + rightFlags.length} флажков!`;
       saveState();
       renderAll();
-      setTimeout(() => document.getElementById('scanOverlay').style.display = 'none', 1500);
+      setTimeout(() => document.getElementById('scanOverlay').style.display = 'none', 2000);
     };
     img.src = photoData;
   }
 
-  // Найти доску по самому большому светлому прямоугольнику
-  function findBoard(data, W, H) {
-    // Создаём карту яркости
-    const brightness = new Array(W * H);
-    for (let i = 0; i < data.length; i += 4) {
-      const R = data[i], G = data[i+1], B = data[i+2];
-      brightness[i / 4] = (R + G + B) / 3;
-    }
+  // Группировка пикселей в кластеры
+  function clusterPixels(pixels, minDist) {
+    if (pixels.length === 0) return [];
     
-    // Ищем порог: доска должна быть светлее среднего
-    let totalBrightness = 0;
-    for (let i = 0; i < brightness.length; i++) totalBrightness += brightness[i];
-    const avgBrightness = totalBrightness / brightness.length;
-    const threshold = avgBrightness + 20; // доска светлее среднего на 20
+    const clusters = [];
+    const used = new Set();
     
-    // Находим границы светлой области
-    let top = H, bottom = 0, left = W, right = 0;
-    let lightPixels = 0;
-    
-    for (let y = 0; y < H; y += 2) {
-      for (let x = 0; x < W; x += 2) {
-        if (brightness[y * W + x] > threshold) {
-          lightPixels++;
-          if (y < top) top = y;
-          if (y > bottom) bottom = y;
-          if (x < left) left = x;
-          if (x > right) right = x;
+    for (let i = 0; i < pixels.length; i++) {
+      if (used.has(i)) continue;
+      
+      const cluster = { x: 0, y: 0, count: 0 };
+      const queue = [i];
+      used.add(i);
+      
+      while (queue.length > 0) {
+        const idx = queue.pop();
+        const p = pixels[idx];
+        cluster.x += p.x;
+        cluster.y += p.y;
+        cluster.count++;
+        
+        // Ищем соседей
+        for (let j = i + 1; j < pixels.length; j++) {
+          if (used.has(j)) continue;
+          const dx = pixels[j].x - p.x;
+          const dy = pixels[j].y - p.y;
+          if (Math.abs(dx) < minDist && Math.abs(dy) < minDist) {
+            used.add(j);
+            queue.push(j);
+          }
         }
+      }
+      
+      // Фильтруем маленькие кластеры (шум)
+      if (cluster.count >= 5) {
+        cluster.x /= cluster.count;
+        cluster.y /= cluster.count;
+        clusters.push(cluster);
       }
     }
     
-    // Проверяем что нашли достаточно светлых пикселей
-    if (lightPixels < 3000) return null;
-    
-    // Проверяем что область похожа на доску (прямоугольник)
-    const area = (bottom - top) * (right - left);
-    if (area < W * H * 0.1) return null; // меньше 10% экрана
-    
-    // Добавляем небольшие отступы
-    const padding = 10;
-    return {
-      top: Math.max(0, top - padding),
-      bottom: Math.min(H, bottom + padding),
-      left: Math.max(0, left - padding),
-      right: Math.min(W, right + padding)
-    };
-  }
-
-  function isRed(R, G, B) {
-    return R > 130 && G < 120 && B < 120 && R > G + 20 && R > B + 20;
-  }
-
-  function isGreen(R, G, B) {
-    return G > 110 && G > R - 10 && G > B + 20;
+    return clusters;
   }
 
   function toggleItem(name) {

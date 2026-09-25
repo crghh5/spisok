@@ -113,16 +113,19 @@
 <input type="file" id="cameraInput" accept="image/*" capture="environment" onchange="handlePhoto(event)">
 
 <script>
-  // Порядок КАК НА ДОСКЕ
+  // ИСПРАВЛЕННЫЙ СПИСОК ПРОДУКТОВ (точно как на твоей доске)
   const allProducts = [
-    "Хлеб","Молоко","Яйца","Картофель","Лук","Морковь",
-    "Курица","Сыр","Мясо","Сметана","Кефир","Творог",
-    "Йогурт","Колбаса","Сосиски","Фарш","Рыба","Помидоры",
-    "Огурцы","Капуста","Сливки","Чеснок",
-    "Яблоки","Бананы","Макароны","Рис","Гречка","Каша",
-    "Мука","Сахар","Соль","Масло","Чай","Кофе","Вода",
-    "Сок","Печенье","Шоколад","Майонез","Кетчуп","Авокадо",
-    "Пельмени","Лимон","Виноград"
+    // ЛЕВЫЙ СТОЛБЕЦ (22 продукта)
+    "Хлеб", "Молоко", "Яйца", "Картофель", "Лук", "Морковь",
+    "Курица", "Сыр", "Мясо", "Сметана", "Кефир", "Творог",
+    "Йогурт", "Колбаса", "Сосиски", "Фарш", "Рыба", "Помидоры",
+    "Огурцы", "Капуста", "Сливки", "Чеснок",
+    
+    // ПРАВЫЙ СТОЛБЕЦ (22 продукта)
+    "Яблоки", "Бананы", "Макароны", "Рис", "Гречка", "Каша",
+    "Мука", "Сахар", "Соль", "Масло", "Чай", "Кофе",
+    "Вода", "Сок", "Печенье", "Шоколад", "Майонез", "Кетчуп",
+    "Авокадо", "Пельмени", "Лимон", "Виноград"
   ];
 
   let items = {}; 
@@ -171,7 +174,7 @@
     e.target.value = '';
   }
 
-  // ТОЧНЫЙ СКАНЕР ПО ЗОНАМ
+  // УЛУЧШЕННЫЙ СКАНЕР С ТОЧНЫМИ КООРДИНАТАМИ
   function scanSwitches(imgSrc) {
     const img = new Image();
     img.crossOrigin = "Anonymous";
@@ -181,8 +184,8 @@
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       
-      // Рабочее разрешение для анализа
-      const W = 400; 
+      // Рабочее разрешение
+      const W = 500; 
       const H = (img.height / img.width) * W;
       
       canvas.width = W;
@@ -192,26 +195,23 @@
       const imageData = ctx.getImageData(0, 0, W, H);
       const data = imageData.data;
       
-      // НАСТРОЙКИ ЗОН (подобраны под твою доску)
-      // Левый столбец: текст слева, магнит справа (~75-90% ширины)
-      // Правый столбец: текст слева, магнит справа (~75-90% ширины)
-      
       const rows = 22;
-      const col1_x_start = Math.floor(W * 0.72); // Начало зоны магнита левого столбца
-      const col1_x_end = Math.floor(W * 0.92);   // Конец зоны
-      
-      const col2_x_start = Math.floor(W * 0.72); // Начало зоны магнита правого столбца
-      const col2_x_end = Math.floor(W * 0.92);
-      
-      // Высота одной строки
       const rowH = H / rows;
       
-      // Функция проверки цвета в зоне
-      function checkZone(x1, x2, y1, y2) {
-        let redCount = 0;
-        let greenCount = 0;
+      // ЗОНЫ ДЛЯ МАГНИТОВ (подобраны под твою доску)
+      // Левый столбец: магниты находятся примерно на 75-88% ширины
+      const col1_x_start = Math.floor(W * 0.73);
+      const col1_x_end = Math.floor(W * 0.88);
+      
+      // Правый столбец: магниты находятся примерно на 75-88% ширины
+      const col2_x_start = Math.floor(W * 0.73);
+      const col2_x_end = Math.floor(W * 0.88);
+      
+      // Функция анализа цвета в зоне
+      function analyzeZone(x1, x2, y1, y2) {
+        let redPixels = 0;
+        let greenPixels = 0;
         
-        // Проходим по пикселям с шагом 2 для скорости
         for (let y = y1; y < y2; y += 2) {
           for (let x = x1; x < x2; x += 2) {
             const i = (y * W + x) * 4;
@@ -219,43 +219,47 @@
             const G = data[i+1];
             const B = data[i+2];
             
-            // Красный фон свитча
-            if (R > 150 && G < 100 && B < 100) redCount++;
-            // Зеленый фон свитча
-            else if (G > 130 && R < 180 && B < 110) greenCount++;
+            // Красный фон свитча (яркий красный)
+            if (R > 160 && G < 90 && B < 90) {
+              redPixels++;
+            }
+            // Зеленый фон свитча (яркий зеленый)
+            else if (G > 140 && R < 170 && B < 100) {
+              greenPixels++;
+            }
           }
         }
-        return { red: redCount, green: greenCount };
+        return { red: redPixels, green: greenPixels };
       }
-
-      // Сканируем левый столбец (индексы 0-21)
+      
+      // Сканируем ЛЕВЫЙ столбец (индексы 0-21)
       for (let r = 0; r < rows; r++) {
-        const y1 = Math.floor(r * rowH + rowH * 0.3);
-        const y2 = Math.floor((r + 1) * rowH - rowH * 0.3);
+        const y1 = Math.floor(r * rowH + rowH * 0.35);
+        const y2 = Math.floor((r + 1) * rowH - rowH * 0.35);
         
-        const res = checkZone(col1_x_start, col1_x_end, y1, y2);
-        const name = allProducts[r];
+        const result = analyzeZone(col1_x_start, col1_x_end, y1, y2);
+        const productName = allProducts[r];
         
-        // Логика: если красного больше 5 пикселей - значит он красный
-        if (res.red > 5) {
-          items[name] = false;
+        // Если красного больше 8 пикселей - значит свитч красный
+        if (result.red > 8) {
+          items[productName] = false; // Красный (не куплено)
         } else {
-          items[name] = true;
+          items[productName] = true;  // Зеленый (куплено)
         }
       }
       
-      // Сканируем правый столбец (индексы 22-43)
+      // Сканируем ПРАВЫЙ столбец (индексы 22-43)
       for (let r = 0; r < rows; r++) {
-        const y1 = Math.floor(r * rowH + rowH * 0.3);
-        const y2 = Math.floor((r + 1) * rowH - rowH * 0.3);
+        const y1 = Math.floor(r * rowH + rowH * 0.35);
+        const y2 = Math.floor((r + 1) * rowH - rowH * 0.35);
         
-        const res = checkZone(col2_x_start, col2_x_end, y1, y2);
-        const name = allProducts[22 + r];
+        const result = analyzeZone(col2_x_start, col2_x_end, y1, y2);
+        const productName = allProducts[22 + r];
         
-        if (res.red > 5) {
-          items[name] = false;
+        if (result.red > 8) {
+          items[productName] = false;
         } else {
-          items[name] = true;
+          items[productName] = true;
         }
       }
       

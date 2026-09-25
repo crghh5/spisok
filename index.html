@@ -18,12 +18,55 @@
   .btn:active { transform: scale(0.95); }
 
   .photo-box { margin: 15px; border-radius: 12px; overflow: hidden; display: none; box-shadow: 0 2px 10px rgba(0,0,0,0.1); position: relative; background: white; }
-  .photo-box img { width: 100%; display: block; max-height: 400px; object-fit: contain; cursor: crosshair; }
+  
+  .photo-container {
+    width: 100%;
+    height: 400px;
+    overflow: hidden;
+    position: relative;
+    touch-action: none;
+    cursor: grab;
+  }
+  .photo-container:active { cursor: grabbing; }
+  
+  .photo-container img {
+    position: absolute;
+    top: 0; left: 0;
+    max-width: none;
+    transform-origin: 0 0;
+    pointer-events: none;
+  }
 
-  .calib-hint { position: absolute; top: 10px; left: 10px; right: 10px; background: rgba(255,152,0,0.95); color: white; padding: 10px; border-radius: 8px; font-size: 13px; font-weight: 600; display: none; text-align: center; }
+  .zoom-controls {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    display: none;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 10;
+  }
+  .zoom-controls.active { display: flex; }
+  
+  .zoom-btn {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255,255,255,0.9);
+    font-size: 22px;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .zoom-btn:active { background: #e0e0e0; }
+
+  .calib-hint { position: absolute; top: 10px; left: 10px; right: 10px; background: rgba(255,152,0,0.95); color: white; padding: 10px; border-radius: 8px; font-size: 13px; font-weight: 600; display: none; text-align: center; z-index: 10; }
   .calib-hint.active { display: block; }
 
-  .scan-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; flex-direction: column; color: white; font-size: 16px; font-weight: 600; }
+  .scan-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; flex-direction: column; color: white; font-size: 16px; font-weight: 600; z-index: 20; }
   .spinner { width: 40px; height: 40px; border: 4px solid rgba(255,255,255,0.3); border-top: 4px solid #4CAF50; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 10px; }
   @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
@@ -67,20 +110,27 @@
 <div class="header">
   <h1>🛒 Список покупок</h1>
   <div class="btn-row">
-    <button class="btn btn-photo" onclick="document.getElementById('cameraInput').click()">📷 Сфоткать</button>
-    <button class="btn btn-calib" onclick="startTapCalibration()"> Калибровка</button>
+    <button class="btn btn-photo" onclick="document.getElementById('cameraInput').click()"> Сфоткать</button>
+    <button class="btn btn-calib" onclick="startTapCalibration()">🎯 Калибровка</button>
     <button class="btn btn-reset" onclick="resetAll()">🔄 Сброс</button>
   </div>
 </div>
 
 <div class="calib-info" id="calibInfo">
   🎯 Калибровка активна. Цвет: <span id="calibColorText">не задан</span><span class="color-preview" id="calibColorPreview"></span>
-  <br><small>Тапни на красный флажок на фото для перекалибровки</small>
+  <br><small>Нажми "Калибровка" и тапни на красный флажок</small>
 </div>
 
 <div class="photo-box" id="photoBox">
-  <img id="photoImg" src="" alt="Фото">
-  <div class="calib-hint" id="calibHint">👆 Тапни на КРАСНЫЙ флажок на фото</div>
+  <div class="photo-container" id="photoContainer">
+    <img id="photoImg" src="" alt="Фото">
+  </div>
+  <div class="zoom-controls" id="zoomControls">
+    <button class="zoom-btn" onclick="zoomIn()">+</button>
+    <button class="zoom-btn" onclick="zoomOut()">−</button>
+    <button class="zoom-btn" onclick="resetZoom()" style="font-size:14px"></button>
+  </div>
+  <div class="calib-hint" id="calibHint">👆 Тапни на КРАСНЫЙ флажок (можно зумить)</div>
   <div class="scan-overlay" id="scanOverlay">
     <div class="spinner"></div>
     <div id="scanText">Сканирую...</div>
@@ -93,7 +143,7 @@
 </div>
 
 <div class="success" id="successMsg">
-  <div class="emoji">🎉</div>
+  <div class="emoji"></div>
   <div class="text">Ты всё купил!</div>
 </div>
 
@@ -119,6 +169,168 @@
   let calibRedColor = null;
   let isCalibrationMode = false;
 
+  // Зум и панорамирование
+  let zoom = 1;
+  let panX = 0, panY = 0;
+  let isDragging = false;
+  let dragStartX = 0, dragStartY = 0;
+  let imgNaturalW = 0, imgNaturalH = 0;
+  let containerW = 0, containerH = 0;
+
+  const container = document.getElementById('photoContainer');
+  const img = document.getElementById('photoImg');
+
+  function updateTransform() {
+    img.style.transform = `translate(${panX}px, ${panY}px) scale(${zoom})`;
+  }
+
+  function zoomIn() {
+    zoom = Math.min(zoom * 1.3, 5);
+    updateTransform();
+  }
+
+  function zoomOut() {
+    zoom = Math.max(zoom / 1.3, 1);
+    if (zoom === 1) { panX = 0; panY = 0; }
+    updateTransform();
+  }
+
+  function resetZoom() {
+    zoom = 1;
+    panX = 0;
+    panY = 0;
+    updateTransform();
+  }
+
+  // Обработка касаний/мыши для панорамирования
+  function getEventPos(e) {
+    if (e.touches && e.touches.length > 0) {
+      return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    }
+    return { x: e.clientX, y: e.clientY };
+  }
+
+  container.addEventListener('mousedown', startDrag);
+  container.addEventListener('touchstart', startDrag, { passive: false });
+
+  function startDrag(e) {
+    if (isCalibrationMode) return; // В режиме калибровки тап = выбор цвета
+    e.preventDefault();
+    const pos = getEventPos(e);
+    isDragging = true;
+    dragStartX = pos.x - panX;
+    dragStartY = pos.y - panY;
+  }
+
+  document.addEventListener('mousemove', doDrag);
+  document.addEventListener('touchmove', doDrag, { passive: false });
+
+  function doDrag(e) {
+    if (!isDragging) return;
+    e.preventDefault();
+    const pos = getEventPos(e);
+    panX = pos.x - dragStartX;
+    panY = pos.y - dragStartY;
+    updateTransform();
+  }
+
+  document.addEventListener('mouseup', endDrag);
+  document.addEventListener('touchend', endDrag);
+
+  function endDrag() {
+    isDragging = false;
+  }
+
+  // Pinch-to-zoom
+  let lastPinchDist = 0;
+  container.addEventListener('touchstart', function(e) {
+    if (e.touches.length === 2) {
+      e.preventDefault();
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      lastPinchDist = Math.sqrt(dx*dx + dy*dy);
+    }
+  }, { passive: false });
+
+  container.addEventListener('touchmove', function(e) {
+    if (e.touches.length === 2) {
+      e.preventDefault();
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      const scale = dist / lastPinchDist;
+      zoom = Math.max(1, Math.min(5, zoom * scale));
+      lastPinchDist = dist;
+      updateTransform();
+    }
+  }, { passive: false });
+
+  // Тап для калибровки
+  container.addEventListener('click', function(e) {
+    if (!isCalibrationMode) return;
+    
+    const rect = container.getBoundingClientRect();
+    
+    // Координаты тапа относительно контейнера
+    const tapX = e.clientX - rect.left;
+    const tapY = e.clientY - rect.top;
+    
+    // Переводим в координаты оригинального изображения
+    // img находится в позиции (panX, panY) с масштабом zoom
+    const imgX = (tapX - panX) / zoom;
+    const imgY = (tapY - panY) / zoom;
+    
+    // Переводим в координаты натурального размера изображения
+    const displayW = imgNaturalW * zoom;
+    const naturalX = (imgX / displayW) * imgNaturalW;
+    const naturalY = (imgY / (imgNaturalH * zoom)) * imgNaturalH;
+    
+    // Анализируем область 15x15 пикселей
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = imgNaturalW;
+    canvas.height = imgNaturalH;
+    ctx.drawImage(img, 0, 0);
+    
+    const size = 15;
+    const x1 = Math.max(0, Math.floor(naturalX) - size);
+    const y1 = Math.max(0, Math.floor(naturalY) - size);
+    const w = size * 2;
+    const h = size * 2;
+    
+    const imageData = ctx.getImageData(x1, y1, w, h);
+    const data = imageData.data;
+    
+    let totalR = 0, totalG = 0, totalB = 0, count = 0;
+    for (let i = 0; i < data.length; i += 4) {
+      totalR += data[i];
+      totalG += data[i+1];
+      totalB += data[i+2];
+      count++;
+    }
+    
+    calibRedColor = {
+      R: Math.round(totalR / count),
+      G: Math.round(totalG / count),
+      B: Math.round(totalB / count)
+    };
+    
+    localStorage.setItem('calibRedColor', JSON.stringify(calibRedColor));
+    updateCalibDisplay();
+    
+    isCalibrationMode = false;
+    document.getElementById('calibHint').classList.remove('active');
+    document.getElementById('zoomControls').classList.remove('active');
+    
+    // Визуальная обратная связь - кружок на месте тапа
+    const circle = document.createElement('div');
+    circle.style.cssText = `position:absolute;left:${tapX-20}px;top:${tapY-20}px;width:40px;height:40px;border-radius:50%;border:3px solid white;background:rgba(255,0,0,0.5);pointer-events:none;z-index:15;transition:all 0.5s;`;
+    container.appendChild(circle);
+    setTimeout(() => circle.remove(), 1500);
+    
+    alert(`✅ Цвет сохранён!\nRGB(${calibRedColor.R}, ${calibRedColor.G}, ${calibRedColor.B})\n\nТеперь нажми "Сфоткать" для сканирования.`);
+  });
+
   function loadState() {
     const saved = localStorage.getItem('shoppingItems');
     if (saved) items = JSON.parse(saved);
@@ -127,7 +339,7 @@
     const savedPhoto = localStorage.getItem('shoppingPhoto');
     if (savedPhoto) {
       photoData = savedPhoto;
-      document.getElementById('photoImg').src = photoData;
+      img.src = photoData;
       document.getElementById('photoBox').style.display = 'block';
     }
     
@@ -151,7 +363,6 @@
     }
   }
 
-  // ТАП-КАЛИБРОВКА
   function startTapCalibration() {
     if (!photoData) {
       alert('Сначала сфотографируй доску!');
@@ -159,64 +370,10 @@
     }
     isCalibrationMode = true;
     document.getElementById('calibHint').classList.add('active');
-    alert('👆 Тапни на КРАСНЫЙ флажок на фото');
+    document.getElementById('zoomControls').classList.add('active');
+    resetZoom();
+    alert('👆 Тапни на КРАСНЫЙ флажок на фото\n\nИспользуй +/− для зума и перетаскивание для панорамирования');
   }
-
-  // Обработка тапа по фото
-  document.getElementById('photoImg').addEventListener('click', function(e) {
-    if (!isCalibrationMode) return;
-    
-    const img = this;
-    const rect = img.getBoundingClientRect();
-    
-    // Координаты тапа относительно изображения
-    const x = (e.clientX - rect.left) / rect.width;
-    const y = (e.clientY - rect.top) / rect.height;
-    
-    // Загружаем оригинальное фото для анализа
-    const image = new Image();
-    image.onload = function() {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      canvas.width = image.width;
-      canvas.height = image.height;
-      ctx.drawImage(image, 0, 0);
-      
-      const pixelX = Math.floor(x * image.width);
-      const pixelY = Math.floor(y * image.height);
-      
-      // Берём область 10x10 пикселей вокруг тапа и усредняем
-      const imageData = ctx.getImageData(
-        Math.max(0, pixelX - 5), 
-        Math.max(0, pixelY - 5), 
-        10, 10
-      );
-      const data = imageData.data;
-      
-      let totalR = 0, totalG = 0, totalB = 0, count = 0;
-      for (let i = 0; i < data.length; i += 4) {
-        totalR += data[i];
-        totalG += data[i+1];
-        totalB += data[i+2];
-        count++;
-      }
-      
-      calibRedColor = {
-        R: Math.round(totalR / count),
-        G: Math.round(totalG / count),
-        B: Math.round(totalB / count)
-      };
-      
-      localStorage.setItem('calibRedColor', JSON.stringify(calibRedColor));
-      updateCalibDisplay();
-      
-      isCalibrationMode = false;
-      document.getElementById('calibHint').classList.remove('active');
-      
-      alert(`✅ Цвет сохранён!\nRGB(${calibRedColor.R}, ${calibRedColor.G}, ${calibRedColor.B})\n\nТеперь нажми "Сфоткать" для сканирования.`);
-    };
-    image.src = photoData;
-  });
 
   function handlePhoto(e) {
     const file = e.target.files[0];
@@ -225,9 +382,24 @@
     const reader = new FileReader();
     reader.onload = function(ev) {
       photoData = ev.target.result;
-      document.getElementById('photoImg').src = photoData;
+      img.src = photoData;
       document.getElementById('photoBox').style.display = 'block';
+      resetZoom();
       saveState();
+      
+      img.onload = function() {
+        imgNaturalW = img.naturalWidth;
+        imgNaturalH = img.naturalHeight;
+        containerW = container.clientWidth;
+        containerH = container.clientHeight;
+        
+        // Автоматически подгоняем изображение под контейнер
+        const scale = Math.min(containerW / imgNaturalW, containerH / imgNaturalH);
+        img.style.width = (imgNaturalW * scale) + 'px';
+        img.style.height = (imgNaturalH * scale) + 'px';
+        zoom = scale;
+        updateTransform();
+      };
       
       const overlay = document.getElementById('scanOverlay');
       const scanText = document.getElementById('scanText');
@@ -243,17 +415,17 @@
   function scanFlags() {
     if (!photoData) return;
 
-    const img = new Image();
-    img.onload = function() {
+    const scanImg = new Image();
+    scanImg.onload = function() {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       const maxW = 600;
-      const scale = Math.min(1, maxW / img.width);
-      const W = Math.floor(img.width * scale);
-      const H = Math.floor(img.height * scale);
+      const scale = Math.min(1, maxW / scanImg.width);
+      const W = Math.floor(scanImg.width * scale);
+      const H = Math.floor(scanImg.height * scale);
       canvas.width = W;
       canvas.height = H;
-      ctx.drawImage(img, 0, 0, W, H);
+      ctx.drawImage(scanImg, 0, 0, W, H);
       
       const imageData = ctx.getImageData(0, 0, W, H);
       const data = imageData.data;
@@ -289,12 +461,10 @@
           const idx = col * 22 + r;
           const name = allProducts[idx];
           
-          // Зоны магнитов - более широкие
           const colStart = col === 0 ? left + boardW * 0.35 : left + boardW * 0.82;
           const colEnd = col === 0 ? left + boardW * 0.50 : left + boardW * 0.97;
           
           let redPixels = 0;
-          let greenPixels = 0;
           let totalPixels = 0;
           
           for (let y = y1; y < y2; y += 2) {
@@ -305,26 +475,21 @@
               
               let isRed = false;
               if (calibRedColor) {
-                // Сравнение с калиброванным цветом
                 const dist = Math.sqrt(
                   Math.pow(R - calibRedColor.R, 2) +
                   Math.pow(G - calibRedColor.G, 2) +
                   Math.pow(B - calibRedColor.B, 2)
                 );
-                isRed = dist < 50;
+                isRed = dist < 60;
               } else {
-                // Стандартный детектор красного
                 isRed = R > 140 && G < 110 && B < 110 && R - G > 40;
               }
               
               if (isRed) redPixels++;
-              else if (G > 120 && G > R - 20 && G > B + 20) greenPixels++;
             }
           }
           
           const redPercent = totalPixels > 0 ? (redPixels / totalPixels * 100) : 0;
-          
-          // Красный если больше 15% пикселей красные
           const isRedFlag = redPercent > 15;
           
           items[name] = isRedFlag;
@@ -337,7 +502,7 @@
       renderAll();
       setTimeout(() => document.getElementById('scanOverlay').style.display = 'none', 2000);
     };
-    img.src = photoData;
+    scanImg.src = photoData;
   }
 
   function findBoard(data, W, H) {

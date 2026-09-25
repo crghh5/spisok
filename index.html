@@ -18,7 +18,10 @@
   .btn:active { transform: scale(0.95); }
 
   .photo-box { margin: 15px; border-radius: 12px; overflow: hidden; display: none; box-shadow: 0 2px 10px rgba(0,0,0,0.1); position: relative; background: white; }
-  .photo-box img { width: 100%; display: block; max-height: 400px; object-fit: contain; }
+  .photo-box img { width: 100%; display: block; max-height: 400px; object-fit: contain; cursor: crosshair; }
+
+  .calib-hint { position: absolute; top: 10px; left: 10px; right: 10px; background: rgba(255,152,0,0.95); color: white; padding: 10px; border-radius: 8px; font-size: 13px; font-weight: 600; display: none; text-align: center; }
+  .calib-hint.active { display: block; }
 
   .scan-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; flex-direction: column; color: white; font-size: 16px; font-weight: 600; }
   .spinner { width: 40px; height: 40px; border: 4px solid rgba(255,255,255,0.3); border-top: 4px solid #4CAF50; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 10px; }
@@ -27,8 +30,7 @@
   .calib-info { background: #FFF3E0; margin: 0 15px 15px; padding: 12px; border-radius: 10px; font-size: 13px; color: #E65100; display: none; }
   .calib-info.active { display: block; }
 
-  .debug-info { background: #E3F2FD; margin: 0 15px 15px; padding: 12px; border-radius: 10px; font-size: 12px; color: #1565C0; display: none; font-family: monospace; }
-  .debug-info.active { display: block; }
+  .color-preview { display: inline-block; width: 20px; height: 20px; border-radius: 4px; vertical-align: middle; margin-left: 8px; border: 2px solid #333; }
 
   .stats { background: white; margin: 0 15px 15px; padding: 15px; border-radius: 12px; display: flex; justify-content: space-around; }
   .stat-num { font-size: 28px; font-weight: 700; }
@@ -57,23 +59,6 @@
   .success .text { font-size: 24px; font-weight: 700; }
   @keyframes popIn { 0% { transform: scale(0.5); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
 
-  .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
-  .modal-overlay.active { display: flex; }
-  .modal { background: white; border-radius: 16px; max-width: 400px; width: 100%; max-height: 80vh; display: flex; flex-direction: column; overflow: hidden; }
-  .modal-header { padding: 20px; border-bottom: 1px solid #eee; }
-  .modal-header h3 { font-size: 20px; margin-bottom: 8px; }
-  .modal-header p { font-size: 13px; color: #666; }
-  .modal-list { overflow-y: auto; flex: 1; padding: 10px 20px; }
-  .modal-item { display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid #f0f0f0; cursor: pointer; }
-  .modal-item:last-child { border-bottom: none; }
-  .modal-item .check { width: 24px; height: 24px; border: 2px solid #ccc; border-radius: 6px; margin-right: 12px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; flex-shrink: 0; }
-  .modal-item.selected .check { background: #e53935; border-color: #e53935; color: white; }
-  .modal-item.selected .m-name { color: #c62828; font-weight: 600; }
-  .modal-item .m-name { font-size: 15px; flex: 1; }
-  .modal-footer { padding: 15px 20px; border-top: 1px solid #eee; display: flex; gap: 10px; }
-  .modal-footer .btn { flex: 1; }
-  .btn-cancel { background: #eee; color: #333; }
-
   #cameraInput { display: none; }
 </style>
 </head>
@@ -83,22 +68,22 @@
   <h1>🛒 Список покупок</h1>
   <div class="btn-row">
     <button class="btn btn-photo" onclick="document.getElementById('cameraInput').click()">📷 Сфоткать</button>
-    <button class="btn btn-calib" onclick="openCalibration()">⚙️ Калибровка</button>
+    <button class="btn btn-calib" onclick="startTapCalibration()"> Калибровка</button>
     <button class="btn btn-reset" onclick="resetAll()">🔄 Сброс</button>
   </div>
 </div>
 
 <div class="calib-info" id="calibInfo">
-  ⚙️ Калибровка активна
+  🎯 Калибровка активна. Цвет: <span id="calibColorText">не задан</span><span class="color-preview" id="calibColorPreview"></span>
+  <br><small>Тапни на красный флажок на фото для перекалибровки</small>
 </div>
-
-<div class="debug-info" id="debugInfo"></div>
 
 <div class="photo-box" id="photoBox">
   <img id="photoImg" src="" alt="Фото">
+  <div class="calib-hint" id="calibHint">👆 Тапни на КРАСНЫЙ флажок на фото</div>
   <div class="scan-overlay" id="scanOverlay">
     <div class="spinner"></div>
-    <div id="scanText">Ищу флажки...</div>
+    <div id="scanText">Сканирую...</div>
   </div>
 </div>
 
@@ -122,20 +107,6 @@
   <div class="product-list" id="okList"></div>
 </div>
 
-<div class="modal-overlay" id="calibModal">
-  <div class="modal">
-    <div class="modal-header">
-      <h3>⚙️ Калибровка</h3>
-      <p>Отметь товары с КРАСНЫМ флажком</p>
-    </div>
-    <div class="modal-list" id="calibList"></div>
-    <div class="modal-footer">
-      <button class="btn btn-cancel" onclick="closeCalibration()">Отмена</button>
-      <button class="btn btn-calib" onclick="saveCalibration()">Сохранить</button>
-    </div>
-  </div>
-</div>
-
 <input type="file" id="cameraInput" accept="image/*" capture="environment" onchange="handlePhoto(event)">
 
 <script>
@@ -146,6 +117,7 @@
   let items = {};
   let photoData = null;
   let calibRedColor = null;
+  let isCalibrationMode = false;
 
   function loadState() {
     const saved = localStorage.getItem('shoppingItems');
@@ -162,7 +134,7 @@
     const savedCalib = localStorage.getItem('calibRedColor');
     if (savedCalib) {
       calibRedColor = JSON.parse(savedCalib);
-      document.getElementById('calibInfo').classList.add('active');
+      updateCalibDisplay();
     }
   }
 
@@ -171,116 +143,80 @@
     if (photoData) localStorage.setItem('shoppingPhoto', photoData);
   }
 
-  let calibSelection = {};
+  function updateCalibDisplay() {
+    if (calibRedColor) {
+      document.getElementById('calibInfo').classList.add('active');
+      document.getElementById('calibColorText').textContent = `RGB(${calibRedColor.R}, ${calibRedColor.G}, ${calibRedColor.B})`;
+      document.getElementById('calibColorPreview').style.background = `rgb(${calibRedColor.R}, ${calibRedColor.G}, ${calibRedColor.B})`;
+    }
+  }
 
-  function openCalibration() {
+  // ТАП-КАЛИБРОВКА
+  function startTapCalibration() {
     if (!photoData) {
       alert('Сначала сфотографируй доску!');
       return;
     }
-    
-    calibSelection = {};
-    allProducts.forEach(p => calibSelection[p] = items[p] === true);
-    
-    const list = document.getElementById('calibList');
-    list.innerHTML = '';
-    
-    allProducts.forEach(name => {
-      const div = document.createElement('div');
-      div.className = 'modal-item' + (calibSelection[name] ? ' selected' : '');
-      div.onclick = () => {
-        calibSelection[name] = !calibSelection[name];
-        div.classList.toggle('selected');
-        div.querySelector('.check').innerHTML = calibSelection[name] ? '✓' : '';
-      };
-      div.innerHTML = `<div class="check">${calibSelection[name] ? '✓' : ''}</div><span class="m-name">${name}</span>`;
-      list.appendChild(div);
-    });
-    
-    document.getElementById('calibModal').classList.add('active');
+    isCalibrationMode = true;
+    document.getElementById('calibHint').classList.add('active');
+    alert('👆 Тапни на КРАСНЫЙ флажок на фото');
   }
 
-  function closeCalibration() {
-    document.getElementById('calibModal').classList.remove('active');
-  }
-
-  function saveCalibration() {
-    allProducts.forEach(p => items[p] = calibSelection[p]);
+  // Обработка тапа по фото
+  document.getElementById('photoImg').addEventListener('click', function(e) {
+    if (!isCalibrationMode) return;
     
-    const img = new Image();
-    img.onload = function() {
+    const img = this;
+    const rect = img.getBoundingClientRect();
+    
+    // Координаты тапа относительно изображения
+    const x = (e.clientX - rect.left) / rect.width;
+    const y = (e.clientY - rect.top) / rect.height;
+    
+    // Загружаем оригинальное фото для анализа
+    const image = new Image();
+    image.onload = function() {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
-      const maxW = 600;
-      const scale = Math.min(1, maxW / img.width);
-      const W = Math.floor(img.width * scale);
-      const H = Math.floor(img.height * scale);
-      canvas.width = W;
-      canvas.height = H;
-      ctx.drawImage(img, 0, 0, W, H);
+      canvas.width = image.width;
+      canvas.height = image.height;
+      ctx.drawImage(image, 0, 0);
       
-      const imageData = ctx.getImageData(0, 0, W, H);
+      const pixelX = Math.floor(x * image.width);
+      const pixelY = Math.floor(y * image.height);
+      
+      // Берём область 10x10 пикселей вокруг тапа и усредняем
+      const imageData = ctx.getImageData(
+        Math.max(0, pixelX - 5), 
+        Math.max(0, pixelY - 5), 
+        10, 10
+      );
       const data = imageData.data;
       
-      const board = findBoard(data, W, H);
-      if (!board) {
-        alert('Доска не найдена');
-        return;
+      let totalR = 0, totalG = 0, totalB = 0, count = 0;
+      for (let i = 0; i < data.length; i += 4) {
+        totalR += data[i];
+        totalG += data[i+1];
+        totalB += data[i+2];
+        count++;
       }
       
-      const { top, bottom, left, right } = board;
-      const boardW = right - left;
-      const boardH = bottom - top;
-      const rows = 22;
-      const rowH = boardH / rows;
+      calibRedColor = {
+        R: Math.round(totalR / count),
+        G: Math.round(totalG / count),
+        B: Math.round(totalB / count)
+      };
       
-      let redR = 0, redG = 0, redB = 0, redCount = 0;
+      localStorage.setItem('calibRedColor', JSON.stringify(calibRedColor));
+      updateCalibDisplay();
       
-      allProducts.forEach((name, idx) => {
-        if (!calibSelection[name]) return;
-        
-        const col = idx < 22 ? 0 : 1;
-        const row = idx % 22;
-        
-        const y1 = Math.floor(top + row * rowH + rowH * 0.35);
-        const y2 = Math.floor(top + (row + 1) * rowH - rowH * 0.35);
-        
-        const colStart = col === 0 ? left + boardW * 0.38 : left + boardW * 0.88;
-        const colEnd = col === 0 ? left + boardW * 0.45 : left + boardW * 0.95;
-        
-        for (let y = y1; y < y2; y += 3) {
-          for (let x = Math.floor(colStart); x < Math.floor(colEnd); x += 3) {
-            const i = (y * W + x) * 4;
-            const R = data[i], G = data[i+1], B = data[i+2];
-            
-            if (R > 140 && G < 100 && B < 100 && R - G > 50) {
-              redR += R;
-              redG += G;
-              redB += B;
-              redCount++;
-            }
-          }
-        }
-      });
+      isCalibrationMode = false;
+      document.getElementById('calibHint').classList.remove('active');
       
-      if (redCount > 100) {
-        calibRedColor = {
-          R: Math.round(redR / redCount),
-          G: Math.round(redG / redCount),
-          B: Math.round(redB / redCount),
-          count: redCount
-        };
-        localStorage.setItem('calibRedColor', JSON.stringify(calibRedColor));
-        document.getElementById('calibInfo').classList.add('active');
-      }
-      
-      saveState();
-      renderAll();
-      closeCalibration();
-      alert(`✅ Калибровка сохранена!\nНайдено ${redCount} красных пикселей\nЦвет: RGB(${calibRedColor.R}, ${calibRedColor.G}, ${calibRedColor.B})`);
+      alert(`✅ Цвет сохранён!\nRGB(${calibRedColor.R}, ${calibRedColor.G}, ${calibRedColor.B})\n\nТеперь нажми "Сфоткать" для сканирования.`);
     };
-    img.src = photoData;
-  }
+    image.src = photoData;
+  });
 
   function handlePhoto(e) {
     const file = e.target.files[0];
@@ -298,7 +234,7 @@
       overlay.style.display = 'flex';
       scanText.textContent = 'Сканирую...';
       
-      setTimeout(() => scanFlags(), 300);
+      setTimeout(() => scanFlags(), 500);
     };
     reader.readAsDataURL(file);
     e.target.value = '';
@@ -339,68 +275,62 @@
       const rows = 22;
       const rowH = boardH / rows;
       
-      scanText.textContent = 'Сканирую...';
+      scanText.textContent = 'Сканирую флажки...';
       
       allProducts.forEach(p => items[p] = false);
       
-      let debugText = '';
       let redDetected = 0;
       
       for (let r = 0; r < rows; r++) {
-        const y1 = Math.floor(top + r * rowH + rowH * 0.35);
-        const y2 = Math.floor(top + (r + 1) * rowH - rowH * 0.35);
+        const y1 = Math.floor(top + r * rowH + rowH * 0.3);
+        const y2 = Math.floor(top + (r + 1) * rowH - rowH * 0.3);
         
         for (let col = 0; col < 2; col++) {
           const idx = col * 22 + r;
           const name = allProducts[idx];
           
-          const colStart = col === 0 ? left + boardW * 0.38 : left + boardW * 0.88;
-          const colEnd = col === 0 ? left + boardW * 0.45 : left + boardW * 0.95;
+          // Зоны магнитов - более широкие
+          const colStart = col === 0 ? left + boardW * 0.35 : left + boardW * 0.82;
+          const colEnd = col === 0 ? left + boardW * 0.50 : left + boardW * 0.97;
           
           let redPixels = 0;
           let greenPixels = 0;
           let totalPixels = 0;
           
-          for (let y = y1; y < y2; y += 3) {
-            for (let x = Math.floor(colStart); x < Math.floor(colEnd); x += 3) {
+          for (let y = y1; y < y2; y += 2) {
+            for (let x = Math.floor(colStart); x < Math.floor(colEnd); x += 2) {
               const i = (y * W + x) * 4;
               const R = data[i], G = data[i+1], B = data[i+2];
               totalPixels++;
               
               let isRed = false;
               if (calibRedColor) {
+                // Сравнение с калиброванным цветом
                 const dist = Math.sqrt(
                   Math.pow(R - calibRedColor.R, 2) +
                   Math.pow(G - calibRedColor.G, 2) +
                   Math.pow(B - calibRedColor.B, 2)
                 );
-                isRed = dist < 40;
+                isRed = dist < 50;
               } else {
-                isRed = R > 150 && G < 90 && B < 90 && R - G > 60;
+                // Стандартный детектор красного
+                isRed = R > 140 && G < 110 && B < 110 && R - G > 40;
               }
               
               if (isRed) redPixels++;
-              else if (G > 130 && G > R && G > B + 20) greenPixels++;
+              else if (G > 120 && G > R - 20 && G > B + 20) greenPixels++;
             }
           }
           
           const redPercent = totalPixels > 0 ? (redPixels / totalPixels * 100) : 0;
-          const greenPercent = totalPixels > 0 ? (greenPixels / totalPixels * 100) : 0;
           
-          // Красный только если больше 20% пикселей красные
-          const isRedFlag = redPercent > 20 && redPixels > greenPixels;
+          // Красный если больше 15% пикселей красные
+          const isRedFlag = redPercent > 15;
           
           items[name] = isRedFlag;
-          
-          if (isRedFlag) {
-            redDetected++;
-            debugText += `${name}: ${redPercent.toFixed(1)}% красных\n`;
-          }
+          if (isRedFlag) redDetected++;
         }
       }
-      
-      document.getElementById('debugInfo').textContent = `Найдено ${redDetected} красных флажков:\n${debugText}`;
-      document.getElementById('debugInfo').classList.add('active');
       
       scanText.textContent = `✅ Найдено ${redDetected} красных`;
       saveState();

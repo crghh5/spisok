@@ -154,9 +154,9 @@
 <div class="header">
   <h1>🛒 Список покупок</h1>
   <div class="btn-row">
-    <button class="btn btn-photo" onclick="document.getElementById('cameraInput').click()"> Сфоткать</button>
-    <button class="btn btn-scan" onclick="autoScan()">🔍 Сканировать</button>
-    <button class="btn btn-reset" onclick="resetAll()">🔄 Сброс</button>
+    <button class="btn btn-photo" onclick="document.getElementById('cameraInput').click()">📷 Сфоткать</button>
+    <button class="btn btn-scan" onclick="autoScan()"> Сканировать</button>
+    <button class="btn btn-reset" onclick="resetAll()"> Сброс</button>
   </div>
 </div>
 
@@ -182,12 +182,12 @@
 </div>
 
 <div class="section">
-  <div class="section-title">🥬 Овощи и мясо</div>
+  <div class="section-title"> Овощи и мясо</div>
   <div class="product-list" id="list1"></div>
 </div>
 
 <div class="section">
-  <div class="section-title">🥛 Молочные продукты</div>
+  <div class="section-title"> Молочные продукты</div>
   <div class="product-list" id="list2"></div>
 </div>
 
@@ -236,8 +236,6 @@
       document.getElementById('photoImg').src = photoData;
       document.getElementById('photoBox').style.display = 'block';
       saveState();
-      
-      // Автоматически запускаем сканер после фото
       setTimeout(autoScan, 500);
     };
     reader.readAsDataURL(file);
@@ -252,14 +250,14 @@
 
     const status = document.getElementById('scanStatus');
     status.style.display = 'block';
-    status.textContent = '🔍 Сканирую магниты...';
+    status.textContent = '🔍 Сканирую...';
 
     const img = new Image();
     img.onload = function() {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       
-      const W = 600;
+      const W = 800;
       const H = (img.height / img.width) * W;
       canvas.width = W;
       canvas.height = H;
@@ -268,69 +266,50 @@
       const imageData = ctx.getImageData(0, 0, W, H);
       const data = imageData.data;
       
-      // Собираем все красные и зелёные пиксели
-      const redPixels = [];
-      const greenPixels = [];
+      const allProducts = [
+        ...categories.list1,
+        ...categories.list2,
+        ...categories.list3
+      ];
       
-      for (let y = 0; y < H; y += 2) {
-        for (let x = 0; x < W; x += 2) {
-          const i = (y * W + x) * 4;
-          const R = data[i], G = data[i+1], B = data[i+2];
+      // Сетка: 22 строки, 2 колонки
+      const rows = 22;
+      const rowH = H / rows;
+      
+      // Зоны для магнитов (правая часть каждой ячейки)
+      // Левый столбец: 40-55% ширины
+      // Правый столбец: 85-98% ширины
+      
+      for (let row = 0; row < rows; row++) {
+        const y1 = Math.floor(row * rowH + rowH * 0.3);
+        const y2 = Math.floor((row + 1) * rowH - rowH * 0.3);
+        
+        // Проверяем левый столбец (индексы 0-21)
+        if (row < 22) {
+          const x1 = Math.floor(W * 0.40);
+          const x2 = Math.floor(W * 0.55);
+          const result = checkZone(data, W, x1, x2, y1, y2);
           
-          // Яркий красный (фон свитча)
-          if (R > 150 && G < 100 && B < 100) {
-            redPixels.push({x, y});
+          if (result.red > result.green && result.red > 10) {
+            items[allProducts[row]] = false; // Красный
+          } else {
+            items[allProducts[row]] = true; // Зелёный
           }
-          // Яркий зелёный (фон свитча)
-          else if (G > 130 && R < 180 && B < 110) {
-            greenPixels.push({x, y});
+        }
+        
+        // Проверяем правый столбец (индексы 22-43)
+        if (row < 22) {
+          const x1 = Math.floor(W * 0.85);
+          const x2 = Math.floor(W * 0.98);
+          const result = checkZone(data, W, x1, x2, y1, y2);
+          
+          if (result.red > result.green && result.red > 10) {
+            items[allProducts[22 + row]] = false; // Красный
+          } else {
+            items[allProducts[22 + row]] = true; // Зелёный
           }
         }
       }
-      
-      // Группируем пиксели в кластеры (магниты)
-      const clusters = findClusters([...redPixels, ...greenPixels], 20);
-      
-      // Сортируем: сначала по X (колонка), потом по Y (строка)
-      clusters.sort((a, b) => {
-        if (Math.abs(a.x - b.x) < W * 0.3) {
-          return a.y - b.y;
-        }
-        return a.x - b.x;
-      });
-      
-      // Назначаем кластеры продуктам
-      const allProducts = Object.values(categories).flat();
-      const leftCol = clusters.filter(c => c.x < W * 0.5);
-      const rightCol = clusters.filter(c => c.x >= W * 0.5);
-      
-      // Сортируем каждую колонку по Y
-      leftCol.sort((a, b) => a.y - b.y);
-      rightCol.sort((a, b) => a.y - b.y);
-      
-      // Сбрасываем всё на зелёное (куплено)
-      allProducts.forEach(p => items[p] = true);
-      
-      // Отмечаем красные кластеры
-      leftCol.forEach((cluster, idx) => {
-        if (idx < 12 && cluster.color === 'red') {
-          items[categories.list1[idx]] = false;
-        }
-      });
-      
-      rightCol.forEach((cluster, idx) => {
-        if (idx < 20 && cluster.color === 'red') {
-          items[categories.list3[idx]] = false;
-        }
-      });
-      
-      // Для list2 (молочные) - распределяем оставшиеся красные из левой колонки
-      const remainingRed = leftCol.filter(c => c.color === 'red').slice(12);
-      remainingRed.forEach((cluster, idx) => {
-        if (idx < 12) {
-          items[categories.list2[idx]] = false;
-        }
-      });
       
       saveState();
       renderAll();
@@ -340,51 +319,29 @@
     img.src = photoData;
   }
 
-  function findClusters(pixels, minDist) {
-    const clusters = [];
-    const used = new Set();
+  function checkZone(data, W, x1, x2, y1, y2) {
+    let red = 0;
+    let green = 0;
     
-    for (let i = 0; i < pixels.length; i++) {
-      if (used.has(i)) continue;
-      
-      const cluster = { x: 0, y: 0, count: 0, color: 'unknown' };
-      const queue = [i];
-      used.add(i);
-      
-      while (queue.length > 0) {
-        const idx = queue.pop();
-        const p = pixels[idx];
-        cluster.x += p.x;
-        cluster.y += p.y;
-        cluster.count++;
+    for (let y = y1; y < y2; y += 2) {
+      for (let x = x1; x < x2; x += 2) {
+        const i = (y * W + x) * 4;
+        const R = data[i];
+        const G = data[i + 1];
+        const B = data[i + 2];
         
-        // Определяем цвет по первому пикселю
-        if (cluster.count === 1) {
-          const i4 = (p.y * 600 + p.x) * 4;
-          const R = pixels[idx].x > 300 ? 200 : 100; // упрощённо
-          cluster.color = p.x < 300 ? 'red' : 'green';
+        // Красный фон свитча
+        if (R > 150 && G < 100 && B < 100) {
+          red++;
         }
-        
-        // Ищем соседей
-        for (let j = 0; j < pixels.length; j++) {
-          if (used.has(j)) continue;
-          const dx = pixels[j].x - p.x;
-          const dy = pixels[j].y - p.y;
-          if (Math.abs(dx) < minDist && Math.abs(dy) < minDist) {
-            used.add(j);
-            queue.push(j);
-          }
+        // Зелёный фон свитча
+        else if (G > 130 && R < 180 && B < 110) {
+          green++;
         }
-      }
-      
-      if (cluster.count > 5) {
-        cluster.x /= cluster.count;
-        cluster.y /= cluster.count;
-        clusters.push(cluster);
       }
     }
     
-    return clusters;
+    return { red, green };
   }
 
   function toggleItem(name) {

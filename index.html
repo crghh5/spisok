@@ -45,6 +45,7 @@
     overflow: hidden;
     display: none;
     box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    position: relative;
   }
 
   .photo-box img {
@@ -53,6 +54,30 @@
     max-height: 300px;
     object-fit: cover;
   }
+
+  .scan-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.7);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    color: white;
+    font-size: 16px;
+    font-weight: 600;
+  }
+
+  .spinner {
+    width: 40px; height: 40px;
+    border: 4px solid rgba(255,255,255,0.3);
+    border-top: 4px solid #4CAF50;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 10px;
+  }
+
+  @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
   .stats {
     background: white;
@@ -147,6 +172,10 @@
 
 <div class="photo-box" id="photoBox">
   <img id="photoImg" src="" alt="Фото">
+  <div class="scan-overlay" id="scanOverlay">
+    <div class="spinner"></div>
+    <div id="scanText">Ищу доску...</div>
+  </div>
 </div>
 
 <div class="stats">
@@ -178,7 +207,6 @@
 <input type="file" id="cameraInput" accept="image/*" capture="environment" onchange="handlePhoto(event)">
 
 <script>
-  // Точный порядок как на доске
   const leftColumn = ["Хлеб", "Молоко", "Яйца", "Картофель", "Лук", "Морковь", "Курица", "Сыр", "Мясо", "Сметана", "Кефир", "Творог", "Йогурт", "Колбаса", "Сосиски", "Фарш", "Рыба", "Помидоры", "Огурцы", "Капуста", "Сливки", "Чеснок"];
   const rightColumn = ["Яблоки", "Бананы", "Макароны", "Рис", "Гречка", "Каша", "Мука", "Сахар", "Соль", "Масло", "Чай", "Кофе", "Вода", "Сок", "Печенье", "Шоколад", "Майонез", "Кетчуп", "Авокадо", "Пельмени", "Лимон", "Виноград"];
   
@@ -188,9 +216,7 @@
   function loadState() {
     const saved = localStorage.getItem('shoppingItems');
     if (saved) items = JSON.parse(saved);
-    else {
-      [...leftColumn, ...rightColumn].forEach(p => items[p] = false);
-    }
+    else [...leftColumn, ...rightColumn].forEach(p => items[p] = false);
     
     const savedPhoto = localStorage.getItem('shoppingPhoto');
     if (savedPhoto) {
@@ -216,8 +242,12 @@
       document.getElementById('photoBox').style.display = 'block';
       saveState();
       
-      // Автоматически сканируем после фото
-      setTimeout(scanBoard, 300);
+      const overlay = document.getElementById('scanOverlay');
+      const scanText = document.getElementById('scanText');
+      overlay.style.display = 'flex';
+      scanText.textContent = 'Ищу доску...';
+      
+      setTimeout(() => scanBoard(), 500);
     };
     reader.readAsDataURL(file);
     e.target.value = '';
@@ -231,7 +261,7 @@
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       
-      const W = 400;
+      const W = 800;
       const H = (img.height / img.width) * W;
       canvas.width = W;
       canvas.height = H;
@@ -240,60 +270,127 @@
       const imageData = ctx.getImageData(0, 0, W, H);
       const data = imageData.data;
       
+      const scanText = document.getElementById('scanText');
+      
+      // ШАГ 1: Найти белую доску на фото
+      scanText.textContent = 'Нахожу доску...';
+      const board = findWhiteBoard(data, W, H);
+      
+      if (!board) {
+        scanText.textContent = 'Доска не найдена. Тапни по продуктам вручную.';
+        setTimeout(() => document.getElementById('scanOverlay').style.display = 'none', 3000);
+        return;
+      }
+      
+      // ШАГ 2: Сканировать магниты внутри доски
+      scanText.textContent = 'Сканирую магниты...';
+      
+      const { top, bottom, left, right } = board;
+      const boardW = right - left;
+      const boardH = bottom - top;
+      
       const rows = 22;
-      const rowH = H / rows;
+      const rowH = boardH / rows;
       
-      // Сканируем левую колонку (магниты на 70-85% ширины)
+      // Магниты находятся в правой части каждой колонки
+      // Левая колонка: текст слева, магнит справа (примерно 60-80% от ширины колонки)
+      // Правая колонка: аналогично
+      
+      const col1Left = left;
+      const col1Right = left + boardW * 0.5;
+      const col2Left = left + boardW * 0.5;
+      const col2Right = right;
+      
+      // Зона магнита внутри колонки (правая часть)
+      const magnetZoneRatio = 0.7; // магнит в последних 30% колонки
+      
       for (let r = 0; r < rows; r++) {
-        const y1 = Math.floor(r * rowH + rowH * 0.3);
-        const y2 = Math.floor((r + 1) * rowH - rowH * 0.3);
-        const x1 = Math.floor(W * 0.70);
-        const x2 = Math.floor(W * 0.85);
+        const y1 = Math.floor(top + r * rowH + rowH * 0.25);
+        const y2 = Math.floor(top + (r + 1) * rowH - rowH * 0.25);
         
-        let redCount = 0;
-        let greenCount = 0;
+        // Левая колонка
+        const col1MagnetX1 = Math.floor(col1Left + (col1Right - col1Left) * magnetZoneRatio);
+        const col1MagnetX2 = Math.floor(col1Right - 5);
         
+        let red1 = 0, green1 = 0;
         for (let y = y1; y < y2; y += 2) {
-          for (let x = x1; x < x2; x += 2) {
+          for (let x = col1MagnetX1; x < col1MagnetX2; x += 2) {
             const i = (y * W + x) * 4;
             const R = data[i], G = data[i+1], B = data[i+2];
-            
-            if (R > 150 && G < 100 && B < 100) redCount++;
-            else if (G > 130 && R < 180 && B < 110) greenCount++;
+            if (isRed(R, G, B)) red1++;
+            else if (isGreen(R, G, B)) green1++;
           }
         }
+        items[leftColumn[r]] = red1 > green1;
         
-        // Если красного больше - значит не куплено
-        items[leftColumn[r]] = redCount > greenCount;
-      }
-      
-      // Сканируем правую колонку (магниты на 70-85% ширины)
-      for (let r = 0; r < rows; r++) {
-        const y1 = Math.floor(r * rowH + rowH * 0.3);
-        const y2 = Math.floor((r + 1) * rowH - rowH * 0.3);
-        const x1 = Math.floor(W * 0.70);
-        const x2 = Math.floor(W * 0.85);
+        // Правая колонка
+        const col2MagnetX1 = Math.floor(col2Left + (col2Right - col2Left) * magnetZoneRatio);
+        const col2MagnetX2 = Math.floor(col2Right - 5);
         
-        let redCount = 0;
-        let greenCount = 0;
-        
+        let red2 = 0, green2 = 0;
         for (let y = y1; y < y2; y += 2) {
-          for (let x = x1; x < x2; x += 2) {
+          for (let x = col2MagnetX1; x < col2MagnetX2; x += 2) {
             const i = (y * W + x) * 4;
             const R = data[i], G = data[i+1], B = data[i+2];
-            
-            if (R > 150 && G < 100 && B < 100) redCount++;
-            else if (G > 130 && R < 180 && B < 110) greenCount++;
+            if (isRed(R, G, B)) red2++;
+            else if (isGreen(R, G, B)) green2++;
           }
         }
-        
-        items[rightColumn[r]] = redCount > greenCount;
+        items[rightColumn[r]] = red2 > green2;
       }
       
+      scanText.textContent = '✅ Готово!';
       saveState();
       renderAll();
+      setTimeout(() => document.getElementById('scanOverlay').style.display = 'none', 1500);
     };
     img.src = photoData;
+  }
+
+  // Детектор белой доски
+  function findWhiteBoard(data, W, H) {
+    // Ищем большой белый прямоугольник
+    // Белый = R>200, G>200, B>200
+    let top = H, bottom = 0, left = W, right = 0;
+    let whitePixels = 0;
+    
+    // Проходим с шагом 4 для скорости
+    for (let y = 0; y < H; y += 4) {
+      for (let x = 0; x < W; x += 4) {
+        const i = (y * W + x) * 4;
+        const R = data[i], G = data[i+1], B = data[i+2];
+        
+        if (R > 200 && G > 200 && B > 200) {
+          whitePixels++;
+          if (y < top) top = y;
+          if (y > bottom) bottom = y;
+          if (x < left) left = x;
+          if (x > right) right = x;
+        }
+      }
+    }
+    
+    // Проверяем что нашли достаточно белых пикселей (доска)
+    if (whitePixels < 5000) return null;
+    
+    // Добавляем отступы чтобы не захватить края
+    const padding = 20;
+    return {
+      top: Math.max(0, top - padding),
+      bottom: Math.min(H, bottom + padding),
+      left: Math.max(0, left - padding),
+      right: Math.min(W, right + padding)
+    };
+  }
+
+  // Детектор красного цвета (фон свитча)
+  function isRed(R, G, B) {
+    return R > 140 && G < 110 && B < 110 && R > G + 30;
+  }
+
+  // Детектор зелёного цвета (фон свитча)
+  function isGreen(R, G, B) {
+    return G > 120 && R < 180 && B < 120 && G > R - 20;
   }
 
   function toggleItem(name) {
@@ -304,7 +401,7 @@
 
   function resetAll() {
     if (confirm('Сбросить всё на красное?')) {
-      [...leftColumn, ...rightColumn].forEach(p => items[p] = false);
+      [...leftColumn, ...rightColumn].forEach(p => items[p] = true);
       saveState();
       renderAll();
     }
@@ -315,7 +412,7 @@
     container.innerHTML = '';
     
     products.forEach(name => {
-      const isNeed = items[name] === true; // true = нужно купить (красное)
+      const isNeed = items[name] === true;
       const div = document.createElement('div');
       div.className = 'product ' + (isNeed ? 'need' : 'ok');
       div.onclick = () => toggleItem(name);
